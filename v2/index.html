@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipe Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lato:wght@300;400;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* ══════════════════════════════════════
+   TOKENS
+══════════════════════════════════════ */
+:root {
+  --cream:      #F7F3EE;
+  --cream-2:    #EDE8E0;
+  --cream-3:    #E0D9CF;
+  --parchment:  #D5CBB8;
+  --terracotta: #C1633A;
+  --terra-dark: #A04F2C;
+  --terra-light:#E8896A;
+  --forest:     #3D6B4F;
+  --forest-2:   #2E5240;
+  --sage:       #7FA98B;
+  --ink:        #1E1A16;
+  --ink-2:      #3A3530;
+  --ink-3:      #6B6358;
+  --ink-4:      #9E9589;
+  --ink-5:      #BFB8AE;
+  --white:      #FFFFFF;
+  --gold:       #B8892A;
+  --gold-light: #D4A94A;
+
+  --bg:         var(--cream);
+  --surface:    var(--white);
+  --surface-2:  var(--cream-2);
+  --border:     var(--cream-3);
+  --border-2:   var(--parchment);
+  --text:       var(--ink);
+  --text-2:     var(--ink-2);
+  --text-3:     var(--ink-3);
+  --text-4:     var(--ink-4);
+  --accent:     var(--terracotta);
+  --accent-dk:  var(--terra-dark);
+
+  --r:  4px;
+  --rl: 10px;
+  --shadow: 0 2px 12px rgba(30,26,22,0.08);
+  --shadow-lg: 0 8px 40px rgba(30,26,22,0.14);
+
+  --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+[data-theme="dark"] {
+  --bg:        #1A1714;
+  --surface:   #232018;
+  --surface-2: #2C2925;
+  --border:    #3A3530;
+  --border-2:  #4A4540;
+  --text:      #F0EBE4;
+  --text-2:    #D8D0C4;
+  --text-3:    #A89E92;
+  --text-4:    #6E6560;
+  --accent:    #D4765A;
+  --accent-dk: #E8896A;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.4);
+}
+
+/* ══════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:15px;scroll-behavior:smooth;}
+body{
+  font-family:'Lato',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background var(--transition), color var(--transition);
+}
+button{font-family:inherit;cursor:pointer;}
+input,textarea,select{font-family:inherit;}
+a{color:inherit;}
+
+/* ══════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════ */
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:200;
+  box-shadow:var(--shadow);
+}
+.topbar-inner{
+  max-width:1400px;margin:0 auto;
+  padding:0 2rem;
+  height:60px;
+  display:flex;align-items:center;gap:1.5rem;
+}
+.logo{
+  font-family:'Playfair Display',serif;
+  font-size:1.3rem;font-weight:600;
+  color:var(--text);
+  cursor:pointer;
+  white-space:nowrap;
+  letter-spacing:-0.01em;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.logo-mark{
+  width:30px;height:30px;
+  background:var(--accent);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.85rem;color:#fff;
+  flex-shrink:0;
+}
+.topnav{display:flex;gap:2px;flex:1;}
+.topnav-btn{
+  background:none;border:none;
+  font-size:0.82rem;font-weight:700;
+  letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--text-3);
+  padding:0.38rem 0.8rem;
+  border-radius:var(--r);
+  transition:color var(--transition),background var(--transition);
+}
+.topnav-btn:hover{color:var(--text);background:var(--surface-2);}
+.topnav-btn.active{color:var(--accent);background:var(--surface-2);}
+.topbar-right{margin-left:auto;display:flex;gap:0.5rem;align-items:center;}
+
+.btn-ghost{
+  background:none;border:1.5px solid var(--border-2);
+  font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+  color:var(--text-2);
+  padding:0.4rem 1rem;border-radius:var(--r);
+  transition:all var(--transition);
+}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:rgba(193,99,58,0.06);}
+.btn-primary{
+  background:var(--accent);color:#fff;
+  border:1.5px solid var(--accent);
+  font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+  padding:0.4rem 1.1rem;border-radius:var(--r);
+  transition:all var(--transition);
+}
+.btn-primary:hover{background:var(--accent-dk);border-color:var(--accent-dk);}
+
+.theme-toggle{
+  background:var(--surface-2);border:1.5px solid var(--border);
+  border-radius:var(--r);width:34px;height:34px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.9rem;transition:all var(--transition);
+  color:var(--text-3);
+}
+.theme-toggle:hover{border-color:var(--border-2);color:var(--text);}
+
+/* ══════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════ */
+.wrap{max-width:1400px;margin:0 auto;padding:3rem 2rem;}
+.page-fade{animation:pageFade 0.25s ease;}
+@keyframes pageFade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* ══════════════════════════════════════
+   HOME
+══════════════════════════════════════ */
+.home-hero{
+  padding:4.5rem 0 4rem;
+  margin-bottom:3.5rem;
+  position:relative;
+  display:grid;
+  grid-template-columns:1fr 480px;
+  gap:4rem;align-items:center;
+}
+.home-hero::after{
+  content:'';
+  position:absolute;bottom:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,var(--accent),var(--parchment),transparent);
+}
+.hero-eyebrow{
+  font-family:'DM Mono',monospace;
+  font-size:0.68rem;font-weight:500;
+  letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:1.25rem;
+  display:flex;align-items:center;gap:0.6rem;
+}
+.hero-eyebrow::before{content:'';display:block;width:24px;height:1.5px;background:var(--accent);}
+.hero-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(2.8rem,4.5vw,4.2rem);
+  line-height:1.05;
+  letter-spacing:-0.03em;
+  color:var(--text);
+  margin-bottom:1.25rem;
+}
+.hero-title em{font-style:italic;color:var(--accent);}
+.hero-desc{
+  font-size:1rem;
+  color:var(--text-3);
+  max-width:420px;
+  line-height:1.8;
+  margin-bottom:2.25rem;
+}
+.hero-actions{display:flex;gap:0.75rem;flex-wrap:wrap;}
+.hero-right{position:relative;}
+
+/* stats card */
+.stats-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  overflow:hidden;
+  box-shadow:var(--shadow-lg);
+}
+.stats-card-header{
+  background:var(--ink);
+  padding:1.5rem 1.75rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.stats-card-title{
+  font-family:'Playfair Display',serif;
+  font-size:1rem;font-style:italic;
+  color:rgba(255,255,255,0.9);
+}
+.stats-card-date{
+  font-family:'DM Mono',monospace;
+  font-size:0.62rem;letter-spacing:0.1em;
+  color:rgba(255,255,255,0.35);
+}
+.stats-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--border);
+}
+.stat-cell{
+  background:var(--surface);
+  padding:1.5rem 1.75rem;
+  cursor:pointer;
+  transition:background var(--transition);
+}
+.stat-cell:hover{background:var(--surface-2);}
+.stat-num{
+  font-family:'Playfair Display',serif;
+  font-size:2.8rem;line-height:1;
+  color:var(--accent);letter-spacing:-0.03em;
+  margin-bottom:0.3rem;
+}
+.stat-lbl{
+  font-family:'DM Mono',monospace;
+  font-size:0.62rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:0.12em;
+  color:var(--text-4);
+}
+.stats-card-footer{
+  padding:1rem 1.75rem;
+  border-top:1px solid var(--border);
+  display:flex;gap:0.5rem;align-items:center;
+}
+.surprise-btn{
+  flex:1;background:none;border:1.5px dashed var(--border-2);
+  border-radius:var(--r);padding:0.55rem 1rem;
+  font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--text-3);
+  transition:all var(--transition);
+  display:flex;align-items:center;justify-content:center;gap:0.4rem;
+}
+.surprise-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(193,99,58,0.06);}
+
+/* ══════════════════════════════════════
+   SECTION HEADINGS
+══════════════════════════════════════ */
+.section-head{
+  display:flex;align-items:baseline;justify-content:space-between;
+  margin-bottom:1.75rem;
+}
+.section-title{
+  font-family:'Playfair Display',serif;
+  font-size:1.6rem;letter-spacing:-0.02em;
+  color:var(--text);
+}
+.section-title span{
+  font-style:italic;color:var(--accent);
+}
+.section-link{
+  font-size:0.75rem;font-weight:700;
+  letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text-4);background:none;border:none;
+  transition:color var(--transition);
+  display:flex;align-items:center;gap:0.3rem;
+}
+.section-link:hover{color:var(--accent);}
+
+/* ══════════════════════════════════════
+   RECIPE GRID / CARDS
+══════════════════════════════════════ */
+.recipe-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+  gap:1.25rem;
+  margin-bottom:3rem;
+}
+.recipe-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  cursor:pointer;
+  transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.recipe-card:hover{
+  transform:translateY(-4px);
+  box-shadow:var(--shadow-lg);
+  border-color:var(--border-2);
+}
+.card-img{
+  width:100%;height:200px;
+  background:var(--surface-2);
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.card-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.4s ease;}
+.recipe-card:hover .card-img img{transform:scale(1.06);}
+.card-img-placeholder{font-size:3rem;opacity:0.35;}
+.card-badge-row{
+  position:absolute;top:0.7rem;left:0.7rem;
+  display:flex;gap:0.35rem;
+}
+.badge{
+  background:rgba(247,243,238,0.95);
+  backdrop-filter:blur(4px);
+  border:1px solid rgba(255,255,255,0.6);
+  border-radius:3px;
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;font-weight:500;
+  letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--ink-2);
+  padding:0.18rem 0.5rem;
+}
+[data-theme="dark"] .badge{
+  background:rgba(35,32,24,0.9);
+  border-color:rgba(255,255,255,0.1);
+  color:var(--text-2);
+}
+.badge.accent{background:var(--accent);color:#fff;border-color:var(--accent);}
+.badge.gold{background:var(--gold);color:#fff;border-color:var(--gold);}
+.cook-count-badge{
+  position:absolute;bottom:0.6rem;right:0.6rem;
+  background:rgba(30,26,22,0.75);
+  backdrop-filter:blur(4px);
+  border-radius:3px;
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;font-weight:500;
+  color:rgba(255,255,255,0.9);
+  padding:0.18rem 0.5rem;
+  display:flex;align-items:center;gap:0.3rem;
+}
+.card-body{padding:1.1rem 1.25rem 1.3rem;flex:1;display:flex;flex-direction:column;}
+.card-title{
+  font-family:'Playfair Display',serif;
+  font-size:1.05rem;line-height:1.3;
+  color:var(--text);
+  margin-bottom:0.35rem;letter-spacing:-0.01em;
+}
+.card-desc{
+  font-size:0.8rem;color:var(--text-3);flex:1;
+  overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;
+  margin-bottom:0.9rem;line-height:1.55;
+}
+.card-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  border-top:1px solid var(--border);
+  padding-top:0.75rem;
+  gap:0.5rem;
+}
+.card-meta{
+  display:flex;gap:0.75rem;flex-wrap:wrap;
+  font-family:'DM Mono',monospace;
+  font-size:0.62rem;font-weight:500;
+  color:var(--text-4);letter-spacing:0.02em;
+}
+.star-display{display:flex;gap:1px;}
+.star-display span{font-size:0.7rem;color:var(--parchment);}
+.star-display span.on{color:var(--gold);}
+
+/* ══════════════════════════════════════
+   FILTER BAR
+══════════════════════════════════════ */
+.filter-bar{
+  display:flex;gap:0.5rem;margin-bottom:2rem;flex-wrap:wrap;align-items:center;
+}
+.search-box{position:relative;flex:1;min-width:200px;}
+.search-box input{
+  width:100%;padding:0.6rem 1rem 0.6rem 2.4rem;
+  border:1.5px solid var(--border);border-radius:var(--r);
+  background:var(--surface);
+  font-size:0.87rem;color:var(--text);
+  outline:none;transition:border-color var(--transition);
+}
+.search-box input:focus{border-color:var(--accent);}
+.search-icon{position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--text-4);font-size:0.9rem;pointer-events:none;}
+.flt-select{
+  padding:0.58rem 1.8rem 0.58rem 0.8rem;
+  border:1.5px solid var(--border);border-radius:var(--r);
+  background:var(--surface);
+  font-size:0.82rem;color:var(--text-2);
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5L9 0z' fill='%239E9589'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 0.6rem center;
+  cursor:pointer;outline:none;
+  transition:border-color var(--transition);
+}
+.flt-select:focus{border-color:var(--accent);}
+.tag-filter-row{display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:1.5rem;}
+.tag-chip{
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:100px;padding:0.28rem 0.8rem;
+  font-size:0.72rem;font-weight:700;letter-spacing:0.04em;
+  color:var(--text-3);cursor:pointer;
+  transition:all var(--transition);
+}
+.tag-chip:hover,.tag-chip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* ══════════════════════════════════════
+   CATEGORIES
+══════════════════════════════════════ */
+.cat-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:1.25rem;
+}
+.cat-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  padding:1.75rem 1.5rem;
+  cursor:pointer;
+  transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+  box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+}
+.cat-card::before{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(193,99,58,0.08),transparent);
+  opacity:0;transition:opacity var(--transition);
+}
+.cat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--border-2);}
+.cat-card:hover::before{opacity:1;}
+.cat-icon{font-size:2rem;margin-bottom:0.75rem;display:block;}
+.cat-name{font-family:'Playfair Display',serif;font-size:1rem;color:var(--text);margin-bottom:0.25rem;}
+.cat-count{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-4);letter-spacing:0.08em;}
+
+/* ══════════════════════════════════════
+   DETAIL PAGE
+══════════════════════════════════════ */
+.detail-back{
+  background:none;border:none;
+  font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--text-3);cursor:pointer;
+  margin-bottom:2.5rem;
+  display:flex;align-items:center;gap:0.5rem;
+  transition:color var(--transition);
+}
+.detail-back:hover{color:var(--accent);}
+.detail-grid{
+  display:grid;grid-template-columns:1fr 380px;
+  gap:3.5rem;align-items:start;
+}
+.detail-hero-img{
+  width:100%;height:420px;
+  background:var(--surface-2);
+  border-radius:var(--rl);
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:2.25rem;
+  box-shadow:var(--shadow-lg);
+  position:relative;
+}
+.detail-hero-img img{width:100%;height:100%;object-fit:cover;}
+.detail-hero-placeholder{font-size:6rem;opacity:0.25;}
+.detail-eyebrow{
+  font-family:'DM Mono',monospace;
+  font-size:0.64rem;font-weight:500;
+  letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:0.8rem;
+  display:flex;gap:1rem;flex-wrap:wrap;
+}
+.detail-title{
+  font-family:'Playfair Display',serif;
+  font-size:2.6rem;line-height:1.1;
+  letter-spacing:-0.03em;color:var(--text);
+  margin-bottom:0.9rem;
+}
+.detail-rating{
+  display:flex;align-items:center;gap:0.85rem;
+  margin-bottom:1rem;
+}
+.detail-desc{
+  font-size:1.02rem;color:var(--text-3);
+  line-height:1.8;margin-bottom:1.75rem;max-width:620px;
+}
+.detail-actions{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:2rem;}
+.action-btn{
+  background:var(--surface);border:1.5px solid var(--border);
+  font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--text-2);padding:0.48rem 0.9rem;border-radius:var(--r);
+  transition:all var(--transition);
+  display:flex;align-items:center;gap:0.35rem;
+}
+.action-btn:hover{border-color:var(--border-2);background:var(--surface-2);}
+.action-btn.primary-action{background:var(--accent);color:#fff;border-color:var(--accent);}
+.action-btn.primary-action:hover{background:var(--accent-dk);border-color:var(--accent-dk);}
+.action-btn.active{background:var(--forest);color:#fff;border-color:var(--forest);}
+.action-btn.danger:hover{border-color:#C0392B;color:#C0392B;background:#fff5f5;}
+.cook-it-btn{
+  background:var(--accent);color:#fff;
+  border:1.5px solid var(--accent);
+  font-size:0.82rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  padding:0.65rem 1.5rem;border-radius:var(--r);
+  transition:all var(--transition);
+  display:flex;align-items:center;gap:0.5rem;
+}
+.cook-it-btn:hover{background:var(--accent-dk);border-color:var(--accent-dk);transform:translateY(-1px);}
+
+/* steps */
+.steps-head{
+  font-family:'Playfair Display',serif;
+  font-size:1.25rem;margin-bottom:1.5rem;
+  display:flex;align-items:center;gap:0.75rem;
+}
+.step-row{display:flex;gap:1.25rem;margin-bottom:1.75rem;align-items:flex-start;}
+.step-n{
+  width:32px;height:32px;
+  background:var(--accent);
+  border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;
+  font-size:0.72rem;font-weight:500;
+  color:#fff;margin-top:2px;
+}
+.step-text{font-size:0.95rem;line-height:1.8;color:var(--text-2);padding-top:0.35rem;}
+.detail-notes{
+  background:var(--surface-2);
+  border-radius:var(--r);
+  padding:1.25rem 1.5rem;
+  margin-top:2rem;
+  font-size:0.88rem;color:var(--text-3);line-height:1.75;
+  border-left:3px solid var(--accent);
+}
+.detail-notes strong{
+  display:block;font-family:'DM Mono',monospace;
+  font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:0.5rem;font-weight:500;
+}
+.tags-row{display:flex;flex-wrap:wrap;gap:0.4rem;margin:1.5rem 0;}
+.tag{
+  background:var(--surface-2);color:var(--text-3);
+  border:1px solid var(--border);
+  border-radius:100px;padding:0.22rem 0.75rem;
+  font-size:0.72rem;font-weight:700;letter-spacing:0.04em;
+}
+
+/* sidebar */
+.sidebar-panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);overflow:hidden;
+  position:sticky;top:76px;
+  box-shadow:var(--shadow);
+}
+.sidebar-header{
+  padding:1.1rem 1.5rem;
+  background:var(--surface-2);
+  border-bottom:1px solid var(--border);
+  font-family:'DM Mono',monospace;
+  font-size:0.62rem;font-weight:500;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--text-4);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.serv-adj{display:flex;align-items:center;gap:0.5rem;}
+.serv-btn{
+  background:var(--bg);border:1.5px solid var(--border-2);
+  border-radius:var(--r);width:26px;height:26px;
+  cursor:pointer;font-size:0.9rem;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-2);transition:all var(--transition);
+}
+.serv-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff;}
+.serv-num{
+  font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:500;
+  color:var(--text);min-width:24px;text-align:center;
+}
+.ing-rows{padding:0.5rem 0;}
+.ing-row{
+  display:flex;gap:0.75rem;align-items:baseline;
+  padding:0.55rem 1.5rem;
+  border-bottom:1px solid var(--border);
+  font-size:0.83rem;
+  transition:background var(--transition);
+  cursor:pointer;
+}
+.ing-row:last-child{border-bottom:none;}
+.ing-row:hover{background:var(--surface-2);}
+.ing-row.checked .ing-name{text-decoration:line-through;opacity:0.4;}
+.ing-qty{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--accent);min-width:54px;font-weight:500;}
+.ing-name{color:var(--text-2);flex:1;}
+.meta-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--border);
+  border-top:1px solid var(--border);
+}
+.meta-cell{background:var(--surface-2);padding:0.9rem 1.25rem;}
+.meta-cell-label{
+  font-family:'DM Mono',monospace;font-size:0.58rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:0.12em;color:var(--text-4);margin-bottom:0.25rem;
+}
+.meta-cell-value{font-size:0.85rem;font-weight:700;color:var(--text-2);}
+
+/* ══════════════════════════════════════
+   COOK MODE
+══════════════════════════════════════ */
+.cook-mode-bg{
+  position:fixed;inset:0;
+  background:var(--ink);
+  z-index:5000;
+  display:flex;flex-direction:column;
+  animation:pageFade 0.3s ease;
+}
+.cook-mode-header{
+  background:rgba(30,26,22,0.95);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding:1rem 2.5rem;
+  display:flex;align-items:center;gap:1.5rem;
+}
+.cook-mode-title{
+  font-family:'Playfair Display',serif;
+  font-size:1.1rem;color:rgba(255,255,255,0.9);
+  flex:1;
+}
+.cook-close{
+  background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);
+  border-radius:var(--r);padding:0.5rem 1rem;
+  font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  color:rgba(255,255,255,0.7);
+  transition:all var(--transition);
+}
+.cook-close:hover{background:rgba(255,255,255,0.15);}
+.cook-body{
+  flex:1;display:flex;overflow:hidden;
+}
+.cook-steps-nav{
+  width:280px;flex-shrink:0;
+  border-right:1px solid rgba(255,255,255,0.06);
+  overflow-y:auto;padding:1.5rem 1rem;
+}
+.cook-step-nav-item{
+  padding:0.75rem 1rem;border-radius:var(--r);
+  cursor:pointer;
+  display:flex;align-items:flex-start;gap:0.75rem;
+  transition:background var(--transition);
+  margin-bottom:0.25rem;
+}
+.cook-step-nav-item:hover{background:rgba(255,255,255,0.06);}
+.cook-step-nav-item.active{background:rgba(193,99,58,0.2);}
+.cook-step-nav-item.done .csni-n{background:var(--forest);}
+.csni-n{
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(255,255,255,0.15);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;font-size:0.62rem;
+  color:rgba(255,255,255,0.7);flex-shrink:0;
+}
+.cook-step-nav-item.active .csni-n{background:var(--accent);}
+.csni-text{
+  font-size:0.78rem;color:rgba(255,255,255,0.45);
+  line-height:1.5;padding-top:1px;
+  overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+.cook-step-nav-item.active .csni-text{color:rgba(255,255,255,0.8);}
+.cook-main{
+  flex:1;overflow-y:auto;
+  display:flex;flex-direction:column;
+  padding:3rem;
+  align-items:center;
+  justify-content:center;
+}
+.cook-step-display{max-width:640px;width:100%;}
+.cook-step-num{
+  font-family:'DM Mono',monospace;
+  font-size:0.68rem;font-weight:500;
+  letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:1.25rem;
+}
+.cook-step-text{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.4rem,3vw,1.9rem);
+  line-height:1.55;color:rgba(255,255,255,0.9);
+  margin-bottom:2.5rem;font-style:italic;
+}
+.cook-step-controls{
+  display:flex;gap:0.75rem;flex-wrap:wrap;
+}
+.cook-nav-btn{
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:var(--r);padding:0.7rem 1.4rem;
+  font-size:0.8rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  color:rgba(255,255,255,0.8);
+  transition:all var(--transition);
+}
+.cook-nav-btn:hover{background:rgba(255,255,255,0.16);}
+.cook-nav-btn.next{background:var(--accent);border-color:var(--accent);color:#fff;}
+.cook-nav-btn.next:hover{background:var(--accent-dk);}
+.cook-timer-widget{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:var(--rl);padding:1.5rem;
+  margin:1.5rem 0;display:flex;flex-direction:column;align-items:center;gap:0.75rem;
+}
+.cook-timer-display{
+  font-family:'DM Mono',monospace;
+  font-size:2.5rem;font-weight:500;
+  color:var(--terra-light);letter-spacing:0.05em;
+}
+.cook-timer-btns{display:flex;gap:0.5rem;}
+.ctb{
+  background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);
+  border-radius:var(--r);padding:0.4rem 0.9rem;
+  font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  color:rgba(255,255,255,0.7);
+  transition:all var(--transition);
+}
+.ctb:hover{background:rgba(255,255,255,0.16);}
+.ctb.start{background:var(--forest);border-color:var(--forest);color:#fff;}
+.cook-sidebar{
+  width:300px;flex-shrink:0;
+  border-left:1px solid rgba(255,255,255,0.06);
+  padding:1.5rem;overflow-y:auto;
+}
+.cook-ing-title{
+  font-family:'DM Mono',monospace;
+  font-size:0.62rem;font-weight:500;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:rgba(255,255,255,0.3);margin-bottom:1rem;
+}
+.cook-ing-item{
+  display:flex;gap:0.75rem;align-items:flex-start;
+  padding:0.55rem 0;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  cursor:pointer;transition:opacity var(--transition);
+}
+.cook-ing-item.done{opacity:0.35;text-decoration:line-through;}
+.cook-ing-qty{font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--terra-light);min-width:48px;}
+.cook-ing-name{font-size:0.82rem;color:rgba(255,255,255,0.65);}
+.cook-progress-bar{
+  height:3px;background:rgba(255,255,255,0.1);
+}
+.cook-progress-fill{
+  height:100%;background:var(--accent);
+  transition:width 0.4s ease;
+}
+.cook-done-screen{
+  text-align:center;
+}
+.cook-done-icon{font-size:4rem;margin-bottom:1.5rem;display:block;}
+.cook-done-title{
+  font-family:'Playfair Display',serif;
+  font-size:2.2rem;font-style:italic;
+  color:rgba(255,255,255,0.9);margin-bottom:0.75rem;
+}
+.cook-done-sub{font-size:0.92rem;color:rgba(255,255,255,0.4);margin-bottom:2rem;}
+
+/* ══════════════════════════════════════
+   RATING STARS (interactive)
+══════════════════════════════════════ */
+.star-input{display:flex;gap:2px;cursor:pointer;}
+.star-input span{
+  font-size:1.3rem;color:var(--border-2);
+  transition:color var(--transition),transform 0.15s;
+  line-height:1;
+}
+.star-input span:hover,.star-input span.on{color:var(--gold);}
+.star-input span:hover{transform:scale(1.15);}
+.rating-label{
+  font-family:'DM Mono',monospace;
+  font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--text-4);margin-left:0.4rem;
+}
+
+/* ══════════════════════════════════════
+   ADD/EDIT FORM
+══════════════════════════════════════ */
+.modal-bg{
+  position:fixed;inset:0;
+  background:rgba(20,18,14,0.7);
+  z-index:1000;
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:2rem 1rem;overflow-y:auto;
+  backdrop-filter:blur(6px);
+}
+.modal-box{
+  background:var(--bg);
+  border-radius:var(--rl);
+  width:100%;max-width:860px;
+  padding:0;margin:auto;
+  position:relative;
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+  animation:modalIn 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(16px) scale(0.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+.modal-header{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:1.75rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);}
+.modal-close{
+  background:var(--surface-2);border:1.5px solid var(--border);
+  border-radius:var(--r);width:32px;height:32px;
+  cursor:pointer;font-size:0.9rem;color:var(--text-3);
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);
+}
+.modal-close:hover{background:var(--border-2);}
+.modal-body{padding:2rem;}
+.modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:2rem;}
+.modal-tab{
+  background:none;border:none;
+  font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text-4);
+  padding:0.75rem 1.25rem;
+  border-bottom:2px solid transparent;
+  margin-bottom:-1px;
+  transition:all var(--transition);
+}
+.modal-tab:hover{color:var(--text);}
+.modal-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+.form-section{margin-bottom:1.75rem;}
+.form-section-title{
+  font-family:'Playfair Display',serif;
+  font-size:0.95rem;color:var(--text);
+  margin-bottom:1.1rem;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.form-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.fg{display:flex;flex-direction:column;gap:0.38rem;}
+.fg.span2{grid-column:1/-1;}
+label.lbl{
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:0.12em;
+  color:var(--text-4);
+}
+input.fi,textarea.fi,select.fi{
+  padding:0.6rem 0.8rem;
+  border:1.5px solid var(--border);border-radius:var(--r);
+  background:var(--surface);
+  font-size:0.88rem;color:var(--text);
+  outline:none;transition:border-color var(--transition);
+  width:100%;
+}
+input.fi:focus,textarea.fi:focus,select.fi:focus{border-color:var(--accent);}
+textarea.fi{resize:vertical;min-height:90px;line-height:1.65;}
+.dyn-list{display:flex;flex-direction:column;gap:0.45rem;}
+.dyn-row{display:flex;gap:0.45rem;align-items:flex-start;}
+.dyn-row .row-n{
+  font-family:'DM Mono',monospace;font-size:0.65rem;
+  color:var(--text-4);width:22px;text-align:right;
+  padding-top:0.7rem;flex-shrink:0;
+}
+.btn-row-rm{
+  background:none;border:1.5px solid var(--border);border-radius:var(--r);
+  width:32px;height:34px;flex-shrink:0;cursor:pointer;
+  font-size:0.85rem;color:var(--text-4);
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);margin-top:1px;
+}
+.btn-row-rm:hover{border-color:#C0392B;color:#C0392B;background:#fff5f5;}
+.btn-add-row{
+  background:none;border:1.5px dashed var(--border-2);border-radius:var(--r);
+  padding:0.55rem;font-size:0.8rem;color:var(--text-4);
+  cursor:pointer;margin-top:0.35rem;transition:all var(--transition);
+  width:100%;text-align:left;
+}
+.btn-add-row:hover{border-color:var(--accent);color:var(--accent);}
+.toggle-row{display:flex;align-items:center;gap:0.6rem;}
+.toggle-row input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;cursor:pointer;}
+.toggle-row label{font-size:0.86rem;color:var(--text-2);cursor:pointer;}
+.img-prev{width:100%;height:150px;object-fit:cover;border-radius:var(--r);border:1px solid var(--border);display:block;margin-top:0.5rem;}
+.img-placeholder{height:90px;border:1.5px dashed var(--border-2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;color:var(--text-4);font-size:0.8rem;margin-top:0.5rem;background:var(--surface-2);}
+.modal-footer{
+  padding:1.5rem 2rem;
+  border-top:1px solid var(--border);
+  background:var(--surface);
+  display:flex;gap:0.75rem;
+}
+
+/* ══════════════════════════════════════
+   BOOK PAGE
+══════════════════════════════════════ */
+.book-hero{
+  background:var(--ink);
+  border-radius:var(--rl);
+  padding:3rem;margin-bottom:1.5rem;
+  display:grid;grid-template-columns:1fr auto;
+  gap:2rem;align-items:center;
+  position:relative;overflow:hidden;
+}
+.book-hero::before{
+  content:'✦';
+  position:absolute;right:7rem;top:50%;transform:translateY(-50%);
+  font-size:10rem;color:rgba(255,255,255,0.03);
+  font-family:'Playfair Display',serif;
+  pointer-events:none;
+}
+.book-hero h2{
+  font-family:'Playfair Display',serif;
+  font-size:1.8rem;letter-spacing:-0.02em;
+  color:#fff;margin-bottom:0.4rem;
+}
+.book-hero p{font-size:0.88rem;color:rgba(255,255,255,0.4);}
+.book-stat-n{font-family:'Playfair Display',serif;font-size:3.5rem;line-height:1;color:var(--terra-light);}
+.book-stat-l{font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-top:0.3rem;}
+.panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1.75rem 2rem;margin-bottom:1.25rem;
+  box-shadow:var(--shadow);
+}
+.panel-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text);margin-bottom:1.25rem;}
+.settings-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+.recipe-sel-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:0.5rem;max-height:380px;overflow-y:auto;padding-right:0.25rem;
+}
+.sel-item{
+  display:flex;align-items:center;gap:0.6rem;
+  padding:0.65rem 0.85rem;
+  border:1.5px solid var(--border);border-radius:var(--r);
+  cursor:pointer;transition:all var(--transition);
+  font-size:0.84rem;background:var(--surface);user-select:none;
+}
+.sel-item:hover{border-color:var(--border-2);background:var(--surface-2);}
+.sel-item.on{border-color:var(--accent);background:rgba(193,99,58,0.06);}
+.sel-item input{accent-color:var(--accent);flex-shrink:0;}
+.sel-item-name{font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sel-item-sub{font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-4);margin-top:1px;}
+.export-row{display:flex;gap:1rem;}
+.export-btn{
+  flex:1;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:var(--rl);padding:1.5rem 1.75rem;cursor:pointer;
+  transition:all var(--transition);text-align:left;font-family:inherit;
+  box-shadow:var(--shadow);
+}
+.export-btn:hover{border-color:var(--border-2);transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.export-btn.dark{background:var(--ink);border-color:var(--ink);}
+.export-btn.dark:hover{background:var(--ink-2);}
+.export-btn-icon{font-size:1.6rem;margin-bottom:0.7rem;display:block;}
+.export-btn-label{font-size:0.95rem;font-weight:700;color:var(--text);display:block;margin-bottom:0.2rem;}
+.export-btn.dark .export-btn-label{color:#fff;}
+.export-btn-sub{font-size:0.75rem;color:var(--text-4);}
+.export-btn.dark .export-btn-sub{color:rgba(255,255,255,0.35);}
+
+/* ══════════════════════════════════════
+   STATS PAGE
+══════════════════════════════════════ */
+.stats-page-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1.25rem;margin-bottom:1.25rem;
+}
+.stats-panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1.75rem;
+  box-shadow:var(--shadow);
+}
+.stats-panel.full{grid-column:1/-1;}
+.stats-panel-title{
+  font-family:'DM Mono',monospace;
+  font-size:0.62rem;font-weight:500;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--text-4);margin-bottom:1.25rem;
+}
+.big-num{
+  font-family:'Playfair Display',serif;
+  font-size:3.5rem;line-height:1;
+  color:var(--accent);letter-spacing:-0.03em;margin-bottom:0.4rem;
+}
+.big-num-label{font-size:0.82rem;color:var(--text-3);}
+.bar-chart-row{
+  display:flex;align-items:center;gap:0.85rem;
+  margin-bottom:0.75rem;font-size:0.8rem;
+}
+.bar-chart-label{width:100px;flex-shrink:0;color:var(--text-3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.75rem;}
+.bar-chart-bar-wrap{flex:1;background:var(--surface-2);border-radius:100px;height:8px;overflow:hidden;}
+.bar-chart-bar{height:100%;background:var(--accent);border-radius:100px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1);}
+.bar-chart-count{
+  font-family:'DM Mono',monospace;font-size:0.65rem;
+  color:var(--text-4);min-width:20px;text-align:right;
+}
+.top-recipe-row{
+  display:flex;gap:1rem;align-items:center;
+  padding:0.75rem 0;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background var(--transition);
+  border-radius:var(--r);padding-left:0.5rem;
+}
+.top-recipe-row:last-child{border-bottom:none;}
+.top-recipe-row:hover{background:var(--surface-2);}
+.top-rec-rank{
+  font-family:'DM Mono',monospace;font-size:0.75rem;
+  color:var(--text-4);width:24px;text-align:center;flex-shrink:0;
+}
+.top-rec-info{flex:1;}
+.top-rec-name{font-size:0.88rem;font-weight:700;color:var(--text);}
+.top-rec-sub{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-4);}
+.top-rec-stars{display:flex;gap:1px;}
+.top-rec-stars span{font-size:0.65rem;color:var(--border-2);}
+.top-rec-stars span.on{color:var(--gold);}
+.donut-wrap{display:flex;align-items:center;gap:1.5rem;}
+.donut-legend{display:flex;flex-direction:column;gap:0.5rem;}
+.legend-item{display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;color:var(--text-3);}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* ══════════════════════════════════════
+   MISC UI
+══════════════════════════════════════ */
+.import-zone{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1.25rem 1.5rem;
+  margin-top:0;
+}
+.import-zone p{font-size:0.82rem;color:var(--text-3);margin-bottom:0.5rem;}
+.empty{text-align:center;padding:6rem 2rem;color:var(--text-4);}
+.empty-icon{font-size:3.5rem;margin-bottom:1.25rem;opacity:0.35;}
+.empty h3{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text-3);margin-bottom:0.5rem;}
+.empty p{font-size:0.87rem;}
+.page-title{font-family:'Playfair Display',serif;font-size:2.2rem;letter-spacing:-0.03em;margin-bottom:0.3rem;}
+.page-sub{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-4);margin-bottom:2rem;letter-spacing:0.06em;}
+.divider{height:1px;background:var(--border);margin:1.5rem 0;}
+
+/* toast */
+.toast{
+  position:fixed;bottom:2rem;right:2rem;
+  background:var(--ink);color:#fff;
+  padding:0.85rem 1.4rem;border-radius:var(--r);
+  font-size:0.82rem;font-weight:700;
+  box-shadow:var(--shadow-lg);z-index:9999;
+  animation:toastIn 0.25s cubic-bezier(0.4,0,0.2,1);
+  max-width:340px;display:flex;align-items:center;gap:0.6rem;
+}
+.toast.ok::before{content:'✓';color:var(--sage);}
+.toast.err::before{content:'✕';color:#E07070;}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.loading-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.loading-box{background:var(--surface);border-radius:var(--rl);padding:2rem 3rem;text-align:center;border:1px solid var(--border);}
+.loading-box p{font-size:0.87rem;color:var(--text-3);margin-top:0.85rem;}
+.spin{width:38px;height:38px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* sel-controls */
+.sel-controls{display:flex;gap:0.5rem;margin-bottom:0.85rem;}
+.sel-ctrl-btn{background:none;border:1.5px solid var(--border);border-radius:var(--r);padding:0.35rem 0.75rem;font-size:0.75rem;color:var(--text-3);cursor:pointer;transition:all var(--transition);}
+.sel-ctrl-btn:hover{border-color:var(--border-2);color:var(--text);}
+.btn-clear{background:none;border:1.5px solid var(--border);font-size:0.8rem;color:var(--text-3);padding:0.55rem 0.85rem;border-radius:var(--r);cursor:pointer;white-space:nowrap;transition:all var(--transition);}
+.btn-clear:hover{border-color:var(--accent);color:var(--accent);}
+
+/* cook count chip */
+.cook-log-row{display:flex;align-items:center;gap:0.85rem;padding:0.6rem 0;border-bottom:1px solid var(--border);font-size:0.83rem;}
+.cook-log-row:last-child{border-bottom:none;}
+.cook-log-title{flex:1;color:var(--text-2);font-weight:700;}
+.cook-log-count{font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--accent);}
+.cook-log-date{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-4);}
+
+@media(max-width:1000px){
+  .home-hero{grid-template-columns:1fr;}
+  .detail-grid{grid-template-columns:1fr;}
+  .sidebar-panel{position:static;}
+  .settings-3{grid-template-columns:1fr 1fr;}
+  .export-row{flex-direction:column;}
+  .stats-page-grid{grid-template-columns:1fr;}
+  .cook-mode-bg .cook-steps-nav,.cook-mode-bg .cook-sidebar{display:none;}
+}
+@media(max-width:640px){
+  .topnav{display:none;}
+  .form-grid{grid-template-columns:1fr;}
+  .book-hero{grid-template-columns:1fr;}
+  .wrap{padding:1.75rem 1rem;}
+  .settings-3{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo" onclick="showPage('home')">
+      <div class="logo-mark">✦</div>
+      Recipe Journal
+    </div>
+    <nav class="topnav">
+      <button class="topnav-btn active" id="nav-home" onclick="showPage('home')">Home</button>
+      <button class="topnav-btn" id="nav-browse" onclick="showPage('browse')">Recipes</button>
+      <button class="topnav-btn" id="nav-categories" onclick="showPage('categories')">Categories</button>
+      <button class="topnav-btn" id="nav-stats" onclick="showPage('stats')">Kitchen Stats</button>
+      <button class="topnav-btn" id="nav-book" onclick="showPage('book')">Export Book</button>
+    </nav>
+    <div class="topbar-right">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" id="theme-btn">🌙</button>
+      <button class="btn-ghost" onclick="surpriseMe()">🎲 Surprise Me</button>
+      <button class="btn-primary" onclick="openAdd()">+ Add Recipe</button>
+    </div>
+  </div>
+</header>
+
+<div id="app"></div>
+<div id="modal-root"></div>
+<div id="cook-root"></div>
+<div id="toast-el" class="toast" style="display:none;"></div>
+<div id="loading-el" class="loading-bg" style="display:none;">
+  <div class="loading-box"><div class="spin"></div><p id="loading-msg">Working…</p></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE & PERSISTENCE
+// ══════════════════════════════════════════════
+const KEY = 'rj_v2';
+function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {recipes:[]}; } catch { return {recipes:[]}; } }
+function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
+
+let db = load();
+let page = 'home';
+let flt = { q:'', cat:'', course:'', inBook:'', tag:'' };
+let editId = null;
+let detailServings = 4;
+let cookModeId = null;
+let cookStep = 0;
+let cookTimerVal = 0;
+let cookTimerRunning = false;
+let cookTimerInterval = null;
+let checkedIngs = new Set();
+let activeModalTab = 'basics';
+let bs = { title:'My Recipe Collection', subtitle:'A Personal Cookbook', author:'', intro:'', groupBy:'category', photos:true, notes:true };
+let currentTheme = localStorage.getItem('rj_theme') || 'light';
+
+document.documentElement.setAttribute('data-theme', currentTheme);
+document.getElementById('theme-btn').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  localStorage.setItem('rj_theme', currentTheme);
+  document.getElementById('theme-btn').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+}
+
+// ══════════════════════════════════════════════
+// STATIC DATA
+// ══════════════════════════════════════════════
+const CATS = [
+  {id:'starters',name:'Starters',icon:'🥗'},{id:'soups',name:'Soups & Stews',icon:'🍲'},
+  {id:'mains',name:'Main Courses',icon:'🍽️'},{id:'pasta',name:'Pasta & Grains',icon:'🍝'},
+  {id:'fish',name:'Fish & Seafood',icon:'🐟'},{id:'meat',name:'Meat & Poultry',icon:'🥩'},
+  {id:'vegetarian',name:'Vegetarian',icon:'🥦'},{id:'salads',name:'Salads',icon:'🥙'},
+  {id:'sides',name:'Sides',icon:'🥕'},{id:'baking',name:'Baking',icon:'🍞'},
+  {id:'pastry',name:'Pastry & Cakes',icon:'🎂'},{id:'desserts',name:'Desserts',icon:'🍮'},
+  {id:'breakfast',name:'Breakfast',icon:'🥞'},{id:'drinks',name:'Drinks',icon:'🍹'},
+  {id:'preserves',name:'Preserves',icon:'🫙'},{id:'sauces',name:'Sauces',icon:'🫕'},
+  {id:'snacks',name:'Snacks',icon:'🧆'},{id:'other',name:'Other',icon:'📌'},
+];
+const COURSES = ['Starter','Soup','Main','Side','Dessert','Breakfast','Drink','Snack','Other'];
+const DIFFS = ['Easy','Medium','Challenging','Advanced'];
+const SEASONS = ['All Year','Spring','Summer','Autumn','Winter'];
+const RATING_LABELS = ['','Poor','Fair','Good','Great','Exceptional'];
+const cat = id => CATS.find(c=>c.id===id);
+
+// ══════════════════════════════════════════════
+// ROUTER
+// ══════════════════════════════════════════════
+function showPage(p, data) {
+  page = p;
+  document.querySelectorAll('.topnav-btn').forEach(b=>b.classList.remove('active'));
+  const nm = {home:'nav-home',browse:'nav-browse',categories:'nav-categories',book:'nav-book',stats:'nav-stats'};
+  if (nm[p]) document.getElementById(nm[p])?.classList.add('active');
+  const app = document.getElementById('app');
+  const pg = ({home:renderHome,browse:()=>renderBrowse(data),categories:renderCategories,book:renderBook,stats:renderStats})[p];
+  if (pg) app.innerHTML = pg();
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════
+function renderHome() {
+  const r = db.recipes;
+  const catCt = {}; r.forEach(x=>{catCt[x.category]=(catCt[x.category]||0)+1;});
+  const recent = [...r].sort((a,b)=>b.createdAt-a.createdAt).slice(0,8);
+  const topRated = [...r].filter(x=>x.rating>0).sort((a,b)=>b.rating-a.rating).slice(0,4);
+  const now = new Date();
+  return `<div class="wrap page-fade">
+    <div class="home-hero">
+      <div class="hero-left">
+        <div class="hero-eyebrow">Personal Recipe Journal</div>
+        <h1 class="hero-title">Your kitchen,<br><em>documented.</em></h1>
+        <p class="hero-desc">Collect every recipe you love, discover favourites with ratings, and export a beautiful cookbook whenever you're ready.</p>
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="openAdd()">+ Add Recipe</button>
+          <button class="btn-ghost" onclick="showPage('browse')">Browse all</button>
+          ${r.length ? `<button class="btn-ghost" onclick="surpriseMe()">🎲 Surprise me</button>` : ''}
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="stats-card">
+          <div class="stats-card-header">
+            <div class="stats-card-title">Your collection</div>
+            <div class="stats-card-date">${now.toLocaleDateString('en-GB',{month:'short',year:'numeric'})}</div>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-cell" onclick="showPage('browse')"><div class="stat-num">${r.length}</div><div class="stat-lbl">Recipes</div></div>
+            <div class="stat-cell" onclick="showPage('categories')"><div class="stat-num">${CATS.filter(c=>catCt[c.id]).length}</div><div class="stat-lbl">Categories</div></div>
+            <div class="stat-cell" onclick="showPage('browse',{inBook:'yes'})"><div class="stat-num">${r.filter(x=>x.inBook).length}</div><div class="stat-lbl">In Book</div></div>
+            <div class="stat-cell" onclick="showPage('stats')"><div class="stat-num">${r.reduce((s,x)=>s+(x.cookCount||0),0)}</div><div class="stat-lbl">Times Cooked</div></div>
+          </div>
+          <div class="stats-card-footer">
+            <button class="surprise-btn" onclick="surpriseMe()">🎲 Surprise me tonight</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${recent.length ? `
+      <div class="section-head">
+        <div class="section-title">Recently <span>added</span></div>
+        <button class="section-link" onclick="showPage('browse')">View all →</button>
+      </div>
+      <div class="recipe-grid">${recent.map(recipeCard).join('')}</div>
+    ` : `<div class="empty"><div class="empty-icon">🍳</div><h3>No recipes yet</h3><p>Start adding your favourites.</p><br><br><button class="btn-primary" onclick="openAdd()">+ Add First Recipe</button></div>`}
+    ${topRated.length ? `
+      <div class="section-head" style="margin-top:1rem;">
+        <div class="section-title">Highest <span>rated</span></div>
+      </div>
+      <div class="recipe-grid">${topRated.map(recipeCard).join('')}</div>
+    ` : ''}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// RECIPE CARD
+// ══════════════════════════════════════════════
+function starsHtml(rating, small=false) {
+  let html = `<div class="star-display">`;
+  for (let i=1;i<=5;i++) html += `<span class="${i<=rating?'on':''}">★</span>`;
+  return html + `</div>`;
+}
+
+function recipeCard(r) {
+  const c = cat(r.category);
+  return `<div class="recipe-card" onclick="openDetail('${r.id}')">
+    <div class="card-img">
+      ${r.image ? `<img src="${r.image}" alt="${x(r.title)}" loading="lazy">` : `<span class="card-img-placeholder">${c?.icon||'🍽️'}</span>`}
+      <div class="card-badge-row">
+        ${c ? `<span class="badge">${c.name}</span>` : ''}
+        ${r.inBook ? `<span class="badge accent">Book</span>` : ''}
+        ${r.rating>=5 ? `<span class="badge gold">★ Top</span>` : ''}
+      </div>
+      ${r.cookCount>0 ? `<div class="cook-count-badge">🍳 Cooked ${r.cookCount}×</div>` : ''}
+    </div>
+    <div class="card-body">
+      <div class="card-title">${r.title}</div>
+      ${r.description ? `<div class="card-desc">${r.description}</div>` : ''}
+      <div class="card-footer">
+        <div class="card-meta">
+          ${r.prepTime ? `<span>${r.prepTime}</span>` : ''}
+          ${r.difficulty ? `<span>${r.difficulty}</span>` : ''}
+          ${r.servings ? `<span>×${r.servings}</span>` : ''}
+        </div>
+        ${r.rating ? starsHtml(r.rating, true) : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// BROWSE
+// ══════════════════════════════════════════════
+function renderBrowse(init) {
+  if (init?.category) flt.cat = init.category;
+  if (init?.inBook) flt.inBook = init.inBook;
+  const filtered = filterRecs();
+  const allTags = [...new Set(db.recipes.flatMap(r=>r.tags||[]))].filter(Boolean).slice(0,16);
+  return `<div class="wrap page-fade">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:0.5rem;">
+      <div>
+        <h1 class="page-title">All Recipes</h1>
+        <div class="page-sub">${filtered.length} recipe${filtered.length!==1?'s':''}</div>
+      </div>
+      <button class="btn-primary" onclick="openAdd()">+ Add Recipe</button>
+    </div>
+    <div class="filter-bar">
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input type="text" placeholder="Search recipes, tags, descriptions…" value="${x(flt.q)}" oninput="flt.q=this.value;reRenderBrowse()">
+      </div>
+      <select class="flt-select" onchange="flt.cat=this.value;reRenderBrowse()">
+        <option value="">All categories</option>
+        ${CATS.map(c=>`<option value="${c.id}" ${flt.cat===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}
+      </select>
+      <select class="flt-select" onchange="flt.course=this.value;reRenderBrowse()">
+        <option value="">All courses</option>
+        ${COURSES.map(c=>`<option value="${c}" ${flt.course===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <select class="flt-select" onchange="flt.sort=this.value;reRenderBrowse()" id="sort-sel">
+        <option value="recent">Recently added</option>
+        <option value="rating">Highest rated</option>
+        <option value="cooked">Most cooked</option>
+        <option value="az">A–Z</option>
+      </select>
+      ${flt.q||flt.cat||flt.course||flt.inBook||flt.tag ? `<button class="btn-clear" onclick="flt={q:'',cat:'',course:'',inBook:'',tag:''};reRenderBrowse()">Clear ×</button>` : ''}
+    </div>
+    ${allTags.length ? `<div class="tag-filter-row">
+      <span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-4);letter-spacing:0.1em;text-transform:uppercase;align-self:center;margin-right:0.25rem;">Tags:</span>
+      ${allTags.map(t=>`<button class="tag-chip ${flt.tag===t?'active':''}" onclick="flt.tag=flt.tag===this.textContent?'':this.textContent;reRenderBrowse()">${t}</button>`).join('')}
+    </div>` : ''}
+    ${filtered.length ? `<div class="recipe-grid">${filtered.map(recipeCard).join('')}</div>`
+      : `<div class="empty"><div class="empty-icon">⌕</div><h3>No results</h3><p>Try a different search.</p></div>`}
+  </div>`;
+}
+
+function reRenderBrowse() { document.getElementById('app').innerHTML = renderBrowse(); }
+function filterRecs() {
+  let recs = db.recipes.filter(r => {
+    const q = flt.q.toLowerCase();
+    if (q && !r.title.toLowerCase().includes(q) && !(r.description||'').toLowerCase().includes(q) && !(r.tags||[]).join(' ').toLowerCase().includes(q)) return false;
+    if (flt.cat && r.category !== flt.cat) return false;
+    if (flt.course && r.course !== flt.course) return false;
+    if (flt.inBook === 'yes' && !r.inBook) return false;
+    if (flt.inBook === 'no' && r.inBook) return false;
+    if (flt.tag && !(r.tags||[]).includes(flt.tag)) return false;
+    return true;
+  });
+  const sort = flt.sort||'recent';
+  if (sort==='rating') recs.sort((a,b)=>(b.rating||0)-(a.rating||0));
+  else if (sort==='cooked') recs.sort((a,b)=>(b.cookCount||0)-(a.cookCount||0));
+  else if (sort==='az') recs.sort((a,b)=>a.title.localeCompare(b.title));
+  else recs.sort((a,b)=>b.createdAt-a.createdAt);
+  return recs;
+}
+
+// ══════════════════════════════════════════════
+// CATEGORIES
+// ══════════════════════════════════════════════
+function renderCategories() {
+  const ct = {}; db.recipes.forEach(r=>{ct[r.category]=(ct[r.category]||0)+1;});
+  const used = CATS.filter(c=>ct[c.id]);
+  return `<div class="wrap page-fade">
+    <h1 class="page-title">Categories</h1>
+    <div class="page-sub">${used.length} active ${used.length===1?'category':'categories'}</div>
+    ${used.length ? `<div class="cat-grid">${used.map(c=>`
+      <div class="cat-card" onclick="flt={q:'',cat:'${c.id}',course:'',inBook:'',tag:''};showPage('browse')">
+        <span class="cat-icon">${c.icon}</span>
+        <div class="cat-name">${c.name}</div>
+        <div class="cat-count">${ct[c.id]} recipe${ct[c.id]!==1?'s':''}</div>
+      </div>`).join('')}</div>`
+    : `<div class="empty"><div class="empty-icon">📁</div><h3>No categories yet</h3><p>Add some recipes first.</p></div>`}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// STATS PAGE
+// ══════════════════════════════════════════════
+function renderStats() {
+  const r = db.recipes;
+  if (!r.length) return `<div class="wrap page-fade"><div class="empty"><div class="empty-icon">📊</div><h3>No data yet</h3><p>Add some recipes first.</p></div></div>`;
+
+  const catCt = {}; r.forEach(x=>{catCt[x.category]=(catCt[x.category]||0)+1;});
+  const topCats = Object.entries(catCt).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxCatCt = topCats[0]?.[1]||1;
+  const totalCooked = r.reduce((s,x)=>s+(x.cookCount||0),0);
+  const avgRating = r.filter(x=>x.rating).length ? (r.filter(x=>x.rating).reduce((s,x)=>s+x.rating,0)/r.filter(x=>x.rating).length).toFixed(1) : '–';
+  const topRated = [...r].filter(x=>x.rating).sort((a,b)=>b.rating-a.rating||b.cookCount-a.cookCount).slice(0,5);
+  const topCooked = [...r].filter(x=>x.cookCount>0).sort((a,b)=>b.cookCount-a.cookCount).slice(0,5);
+
+  // Diff distribution
+  const diffCt = {}; DIFFS.forEach(d=>{diffCt[d]=r.filter(x=>x.difficulty===d).length;});
+  const diffColors = ['#3D6B4F','#7FA98B','#C1633A','#B8892A'];
+
+  // Rating distribution
+  const ratCt = [0,0,0,0,0]; r.forEach(x=>{if(x.rating>=1&&x.rating<=5)ratCt[x.rating-1]++;});
+
+  const donutData = DIFFS.map((d,i)=>({label:d,count:diffCt[d]||0,color:diffColors[i]})).filter(x=>x.count>0);
+  const donutTotal = donutData.reduce((s,x)=>s+x.count,0)||1;
+
+  // Build SVG donut
+  let donutSvg = `<svg viewBox="0 0 80 80" width="100" height="100">`;
+  let cumPct = 0;
+  donutData.forEach(d=>{
+    const pct = d.count/donutTotal;
+    const start = cumPct * 2 * Math.PI - Math.PI/2;
+    const end = (cumPct+pct) * 2 * Math.PI - Math.PI/2;
+    const r1=30,cx=40,cy=40;
+    const x1=cx+r1*Math.cos(start),y1=cy+r1*Math.sin(start);
+    const x2=cx+r1*Math.cos(end),y2=cy+r1*Math.sin(end);
+    const large = pct>0.5?1:0;
+    if(pct<1){
+      donutSvg+=`<path d="M${cx},${cy} L${x1},${y1} A${r1},${r1} 0 ${large},1 ${x2},${y2} Z" fill="${d.color}" opacity="0.85"/>`;
+    } else {
+      donutSvg+=`<circle cx="${cx}" cy="${cy}" r="${r1}" fill="${d.color}" opacity="0.85"/>`;
+    }
+    cumPct+=pct;
+  });
+  donutSvg+=`<circle cx="40" cy="40" r="18" fill="var(--surface)"/><text x="40" y="37" text-anchor="middle" font-size="9" fill="var(--text-4)" font-family="DM Mono">${r.length}</text><text x="40" y="47" text-anchor="middle" font-size="6.5" fill="var(--text-4)" font-family="DM Mono">recipes</text></svg>`;
+
+  return `<div class="wrap page-fade">
+    <h1 class="page-title">Kitchen <span style="font-style:italic;color:var(--accent);">Stats</span></h1>
+    <div class="page-sub">Your cooking by the numbers</div>
+    <div class="stats-page-grid">
+      <!-- Big numbers -->
+      <div class="stats-panel">
+        <div class="stats-panel-title">Collection overview</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+          <div><div class="big-num">${r.length}</div><div class="big-num-label">Total recipes</div></div>
+          <div><div class="big-num">${totalCooked}</div><div class="big-num-label">Times cooked</div></div>
+          <div><div class="big-num">${avgRating}<span style="font-size:1.5rem">★</span></div><div class="big-num-label">Avg. rating</div></div>
+          <div><div class="big-num">${r.filter(x=>x.inBook).length}</div><div class="big-num-label">In your book</div></div>
+        </div>
+      </div>
+      <!-- Categories -->
+      <div class="stats-panel">
+        <div class="stats-panel-title">Top categories</div>
+        ${topCats.map(([id,ct])=>{
+          const c=cat(id);
+          return `<div class="bar-chart-row">
+            <div class="bar-chart-label">${c?c.icon+' '+c.name:id}</div>
+            <div class="bar-chart-bar-wrap"><div class="bar-chart-bar" style="width:${(ct/maxCatCt*100).toFixed(1)}%"></div></div>
+            <div class="bar-chart-count">${ct}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <!-- Difficulty donut -->
+      <div class="stats-panel">
+        <div class="stats-panel-title">Difficulty spread</div>
+        <div class="donut-wrap">
+          ${donutSvg}
+          <div class="donut-legend">
+            ${donutData.map(d=>`<div class="legend-item"><div class="legend-dot" style="background:${d.color}"></div>${d.label}: ${d.count}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <!-- Rating distribution -->
+      <div class="stats-panel">
+        <div class="stats-panel-title">Rating distribution</div>
+        ${[5,4,3,2,1].map(i=>`<div class="bar-chart-row">
+          <div class="bar-chart-label" style="display:flex;gap:2px">${'★'.repeat(i)}</div>
+          <div class="bar-chart-bar-wrap"><div class="bar-chart-bar" style="width:${ratCt[i-1]?((ratCt[i-1]/r.length)*100).toFixed(1):0}%;background:var(--gold)"></div></div>
+          <div class="bar-chart-count">${ratCt[i-1]}</div>
+        </div>`).join('')}
+      </div>
+      <!-- Top rated -->
+      ${topRated.length ? `<div class="stats-panel">
+        <div class="stats-panel-title">Highest rated</div>
+        ${topRated.map((r,i)=>`<div class="top-recipe-row" onclick="openDetail('${r.id}')">
+          <div class="top-rec-rank">${i+1}</div>
+          <div class="top-rec-info"><div class="top-rec-name">${r.title}</div><div class="top-rec-sub">${cat(r.category)?.name||''} ${r.cookCount?'· Cooked '+r.cookCount+'×':''}</div></div>
+          <div class="top-rec-stars">${[1,2,3,4,5].map(s=>`<span class="${s<=r.rating?'on':''}">★</span>`).join('')}</div>
+        </div>`).join('')}
+      </div>` : ''}
+      <!-- Most cooked -->
+      ${topCooked.length ? `<div class="stats-panel">
+        <div class="stats-panel-title">Most cooked</div>
+        ${topCooked.map((r,i)=>`<div class="top-recipe-row" onclick="openDetail('${r.id}')">
+          <div class="top-rec-rank">${i+1}</div>
+          <div class="top-rec-info"><div class="top-rec-name">${r.title}</div><div class="top-rec-sub">${cat(r.category)?.name||''}</div></div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--accent)">🍳 ${r.cookCount}×</div>
+        </div>`).join('')}
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// DETAIL PAGE
+// ══════════════════════════════════════════════
+function openDetail(id) {
+  const r = db.recipes.find(x=>x.id===id);
+  if (!r) return;
+  detailServings = parseInt(r.servings)||4;
+  checkedIngs = new Set();
+  const c = cat(r.category);
+  document.querySelectorAll('.topnav-btn').forEach(b=>b.classList.remove('active'));
+
+  const html = `<div class="wrap page-fade">
+    <button class="detail-back" onclick="showPage('browse')">← Back to Recipes</button>
+    <div class="detail-grid">
+      <div class="detail-main">
+        <div class="detail-hero-img">
+          ${r.image ? `<img src="${r.image}" alt="${x(r.title)}">` : `<span class="detail-hero-placeholder">${c?.icon||'🍽️'}</span>`}
+        </div>
+        <div class="detail-eyebrow">
+          ${c ? `<span>${c.icon} ${c.name}</span>` : ''}
+          ${r.course ? `<span>${r.course}</span>` : ''}
+          ${r.difficulty ? `<span>${r.difficulty}</span>` : ''}
+          ${r.season ? `<span>${r.season}</span>` : ''}
+        </div>
+        <h1 class="detail-title">${r.title}</h1>
+        <div class="detail-rating">
+          <div class="star-input" id="rating-stars">
+            ${[1,2,3,4,5].map(i=>`<span class="${i<=(r.rating||0)?'on':''}" onclick="setRating('${r.id}',${i})" onmouseover="hoverStar(${i})" onmouseout="resetStars('${r.id}')"  >★</span>`).join('')}
+          </div>
+          <span class="rating-label" id="rating-label">${r.rating ? RATING_LABELS[r.rating] : 'Rate this recipe'}</span>
+        </div>
+        ${r.description ? `<p class="detail-desc">${r.description}</p>` : ''}
+        <div class="detail-actions">
+          <button class="cook-it-btn" onclick="startCookMode('${r.id}')">🍳 Cook Mode</button>
+          <button class="action-btn ${r.inBook?'active':''}" id="book-btn-${r.id}" onclick="toggleBook('${r.id}')">
+            ${r.inBook ? '✓ In Book' : '+ Add to Book'}
+          </button>
+          <button class="action-btn" onclick="openEdit('${r.id}')">✎ Edit</button>
+          <button class="action-btn" onclick="printRec('${r.id}')">Print</button>
+          <button class="action-btn danger" onclick="deleteRec('${r.id}')">Delete</button>
+        </div>
+        ${r.tags && r.tags.length ? `<div class="tags-row">${r.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>` : ''}
+        ${r.steps && r.steps.length ? `
+          <div class="steps-head">Method <span style="font-size:0.75rem;font-weight:400;color:var(--text-4);font-family:'DM Mono',monospace;font-style:normal;letter-spacing:0.08em;">${r.steps.length} STEPS</span></div>
+          ${r.steps.map((s,i)=>`<div class="step-row"><div class="step-n">${i+1}</div><div class="step-text">${s}</div></div>`).join('')}
+        ` : ''}
+        ${r.notes ? `<div class="detail-notes"><strong>Chef's Notes</strong>${r.notes}</div>` : ''}
+        ${r.cookCount>0 ? `<div class="detail-notes" style="border-left-color:var(--forest);margin-top:1rem;"><strong>Cook History</strong>Cooked ${r.cookCount} time${r.cookCount>1?'s':''}.${r.lastCooked?' Last made '+new Date(r.lastCooked).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+'.':''}</div>` : ''}
+      </div>
+      <div class="detail-sidebar">
+        <div class="sidebar-panel">
+          ${r.ingredients && r.ingredients.length ? `
+          <div class="sidebar-header">
+            Ingredients
+            <div class="serv-adj">
+              <button class="serv-btn" onclick="adjServ(-1,'${r.id}')">−</button>
+              <span class="serv-num" id="sn-${r.id}">${detailServings}</span>
+              <button class="serv-btn" onclick="adjServ(1,'${r.id}')">+</button>
+            </div>
+          </div>
+          <div class="ing-rows" id="ing-rows-${r.id}">
+            ${renderIngs(r.ingredients, parseInt(r.servings)||4, detailServings, r.id)}
+          </div>
+          ` : `<div class="sidebar-header">No ingredients listed</div>`}
+          <div class="meta-grid">
+            ${r.prepTime ? `<div class="meta-cell"><div class="meta-cell-label">Prep</div><div class="meta-cell-value">${r.prepTime}</div></div>` : ''}
+            ${r.cookTime ? `<div class="meta-cell"><div class="meta-cell-label">Cook</div><div class="meta-cell-value">${r.cookTime}</div></div>` : ''}
+            ${r.totalTime ? `<div class="meta-cell"><div class="meta-cell-label">Total</div><div class="meta-cell-value">${r.totalTime}</div></div>` : ''}
+            ${r.servings ? `<div class="meta-cell"><div class="meta-cell-label">Serves</div><div class="meta-cell-value">${r.servings}</div></div>` : ''}
+            ${r.source ? `<div class="meta-cell" style="grid-column:1/-1;"><div class="meta-cell-label">Source</div><div class="meta-cell-value">${r.source}</div></div>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('app').innerHTML = html;
+  window.scrollTo(0,0);
+}
+
+function renderIngs(ings, base, cur, rid) {
+  const ratio = cur / base;
+  return ings.map((ing, idx) => {
+    const m = ing.match(/^([\d\s\/\.]+)?\s*(.*)$/);
+    let qty = '', name = ing;
+    if (m && m[1]) {
+      try {
+        const ev = parseFloat(Function('"use strict"; return ('+m[1].trim().replace(/(\d)\s+(\d)/g,'$1+$2/')+')').call());
+        if (!isNaN(ev)) {
+          const sc = ev * ratio;
+          qty = sc % 1 === 0 ? sc.toString() : sc.toFixed(sc < 1 ? 2 : 1).replace(/\.0$/,'');
+          name = m[2];
+        }
+      } catch {}
+    }
+    const key = `${rid}-${idx}`;
+    return `<div class="ing-row ${checkedIngs.has(key)?'checked':''}" onclick="toggleIng('${rid}',${idx})">
+      <span class="ing-qty">${qty}</span><span class="ing-name">${name}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleIng(rid, idx) {
+  const key = `${rid}-${idx}`;
+  if (checkedIngs.has(key)) checkedIngs.delete(key);
+  else checkedIngs.add(key);
+  const r = db.recipes.find(x=>x.id===rid);
+  if (!r) return;
+  document.getElementById(`ing-rows-${rid}`).innerHTML = renderIngs(r.ingredients||[], parseInt(r.servings)||4, detailServings, rid);
+}
+
+function adjServ(d, id) {
+  const r = db.recipes.find(x=>x.id===id);
+  if (!r) return;
+  detailServings = Math.max(1, detailServings + d);
+  document.getElementById('sn-'+id).textContent = detailServings;
+  document.getElementById('ing-rows-'+id).innerHTML = renderIngs(r.ingredients||[], parseInt(r.servings)||4, detailServings, id);
+}
+
+function setRating(id, val) {
+  const r = db.recipes.find(x=>x.id===id);
+  if (!r) return;
+  r.rating = val; save();
+  document.querySelectorAll('#rating-stars span').forEach((s,i)=>s.classList.toggle('on',i<val));
+  document.getElementById('rating-label').textContent = RATING_LABELS[val];
+  toast('Rating saved', 'ok');
+}
+function hoverStar(i) {
+  document.querySelectorAll('#rating-stars span').forEach((s,j)=>s.style.color=j<i?'var(--gold)':'var(--border-2)');
+  document.getElementById('rating-label').textContent = RATING_LABELS[i];
+}
+function resetStars(id) {
+  const r = db.recipes.find(x=>x.id===id);
+  if (!r) return;
+  document.querySelectorAll('#rating-stars span').forEach((s,j)=>{s.style.color='';s.classList.toggle('on',j<(r.rating||0));});
+  document.getElementById('rating-label').textContent = r.rating ? RATING_LABELS[r.rating] : 'Rate this recipe';
+}
+
+function toggleBook(id) {
+  const r = db.recipes.find(x=>x.id===id);
+  if (!r) return;
+  r.inBook = !r.inBook; save();
+  const btn = document.getElementById('book-btn-'+id);
+  if (btn) { btn.textContent = r.inBook ? '✓ In Book' : '+ Add to Book'; btn.className = 'action-btn'+(r.inBook?' active':''); }
+  toast(r.inBook ? 'Added to book' : 'Removed from book', 'ok');
+}
+
+function deleteRec(id) {
+  if (!confirm('Delete this recipe? This cannot be undone.')) return;
+  db.recipes = db.recipes.filter(r=>r.id!==id); save();
+  toast('Recipe deleted', ''); showPage('browse');
+}
+
+function surpriseMe() {
+  if (!db.recipes.length) { toast('Add some recipes first!', 'err'); return; }
+  const r = db.recipes[Math.floor(Math.random()*db.recipes.length)];
+  openDetail(r.id);
+}
+
+// ══════════════════════════════════════════════
+// COOK MODE
+// ══════════════════════════════════════════════
+function startCookMode(id) {
+  const r = db.recipes.find(x=>x.id===id);
+  if (!r || !r.steps || !r.steps.length) { toast('No steps to cook through!', 'err'); return; }
+  cookModeId = id;
+  cookStep = 0;
+  stopCookTimer();
+  renderCookMode();
+  // log cook
+  r.cookCount = (r.cookCount||0)+1;
+  r.lastCooked = Date.now();
+  save();
+}
+
+function renderCookMode() {
+  const r = db.recipes.find(x=>x.id===cookModeId);
+  if (!r) return;
+  const steps = r.steps;
+  const isDone = cookStep >= steps.length;
+  const progress = isDone ? 100 : (cookStep/steps.length*100);
+
+  const stepsNav = steps.map((s,i)=>`
+    <div class="cook-step-nav-item ${i===cookStep?'active':''} ${i<cookStep?'done':''}" onclick="goToCookStep(${i})">
+      <div class="csni-n">${i<cookStep?'✓':(i+1)}</div>
+      <div class="csni-text">${s.slice(0,60)}${s.length>60?'…':''}</div>
+    </div>`).join('');
+
+  const mainContent = isDone ? `
+    <div class="cook-done-screen">
+      <span class="cook-done-icon">🎉</span>
+      <div class="cook-done-title">All done! Bon appétit.</div>
+      <div class="cook-done-sub">You cooked ${r.title}.<br>Now go enjoy it.</div>
+      <button class="cook-nav-btn next" onclick="closeCookMode()">Back to Recipe</button>
+    </div>` : `
+    <div class="cook-step-display">
+      <div class="cook-step-num">Step ${cookStep+1} of ${steps.length}</div>
+      <div class="cook-step-text">${steps[cookStep]}</div>
+      ${detectTimer(steps[cookStep])}
+      <div class="cook-step-controls">
+        ${cookStep>0 ? `<button class="cook-nav-btn" onclick="goToCookStep(${cookStep-1})">← Previous</button>` : ''}
+        <button class="cook-nav-btn next" onclick="goToCookStep(${cookStep+1})">${cookStep===steps.length-1?'Finish ✓':'Next Step →'}</button>
+      </div>
+    </div>`;
+
+  const ings = (r.ingredients||[]).map((ing,i)=>`
+    <div class="cook-ing-item ${checkedIngs.has('cm-'+i)?'done':''}" onclick="toggleCookIng(${i})">
+      <span class="cook-ing-qty">${ing.match(/^[\d\s\/\.]+/)?.[0]?.trim()||''}</span>
+      <span class="cook-ing-name">${ing.replace(/^[\d\s\/\.]+/,'').trim()}</span>
+    </div>`).join('');
+
+  const html = `<div class="cook-mode-bg">
+    <div class="cook-progress-bar"><div class="cook-progress-fill" style="width:${progress}%"></div></div>
+    <div class="cook-mode-header">
+      <div class="cook-mode-title">${r.title}</div>
+      <button class="cook-close" onclick="closeCookMode()">✕ Exit Cook Mode</button>
+    </div>
+    <div class="cook-body">
+      <div class="cook-steps-nav">${stepsNav}</div>
+      <div class="cook-main">${mainContent}</div>
+      <div class="cook-sidebar">
+        <div class="cook-ing-title">Ingredients</div>
+        ${ings || '<div style="color:rgba(255,255,255,0.3);font-size:0.8rem;">No ingredients listed</div>'}
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('cook-root').innerHTML = html;
+}
+
+function detectTimer(text) {
+  const m = text.match(/(\d+)\s*(min|minute|minutes|hour|hours|second|seconds)/i);
+  if (!m) return '';
+  const num = parseInt(m[1]);
+  const unit = m[2].toLowerCase();
+  const secs = unit.startsWith('hour') ? num*3600 : unit.startsWith('sec') ? num : num*60;
+  cookTimerVal = secs;
+  return `<div class="cook-timer-widget">
+    <div style="font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.3);">Timer detected</div>
+    <div class="cook-timer-display" id="cook-timer-disp">${formatTime(secs)}</div>
+    <div class="cook-timer-btns">
+      <button class="ctb start" id="cook-timer-start-btn" onclick="toggleCookTimer(${secs})">Start</button>
+      <button class="ctb" onclick="resetCookTimer(${secs})">Reset</button>
+    </div>
+  </div>`;
+}
+
+function formatTime(s) {
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  if(h>0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function toggleCookTimer(init) {
+  if (cookTimerRunning) {
+    stopCookTimer();
+    const btn = document.getElementById('cook-timer-start-btn');
+    if (btn) btn.textContent = 'Resume';
+  } else {
+    cookTimerRunning = true;
+    const btn = document.getElementById('cook-timer-start-btn');
+    if (btn) btn.textContent = 'Pause';
+    cookTimerInterval = setInterval(()=>{
+      cookTimerVal--;
+      const disp = document.getElementById('cook-timer-disp');
+      if (disp) disp.textContent = formatTime(Math.max(0,cookTimerVal));
+      if (cookTimerVal<=0) {
+        stopCookTimer();
+        if (disp) disp.style.color='#7FA98B';
+        toast('⏰ Timer done!', 'ok');
+      }
+    },1000);
+  }
+}
+
+function stopCookTimer() {
+  cookTimerRunning = false;
+  clearInterval(cookTimerInterval);
+}
+function resetCookTimer(init) {
+  stopCookTimer();
+  cookTimerVal = init;
+  const disp = document.getElementById('cook-timer-disp');
+  if (disp) { disp.textContent = formatTime(init); disp.style.color=''; }
+  const btn = document.getElementById('cook-timer-start-btn');
+  if (btn) btn.textContent = 'Start';
+}
+
+function goToCookStep(i) {
+  stopCookTimer();
+  const r = db.recipes.find(x=>x.id===cookModeId);
+  cookStep = Math.max(0, Math.min(i, r?.steps?.length||0));
+  renderCookMode();
+}
+function toggleCookIng(i) {
+  const k = 'cm-'+i;
+  if (checkedIngs.has(k)) checkedIngs.delete(k);
+  else checkedIngs.add(k);
+  const el = document.querySelectorAll('.cook-ing-item')[i];
+  if (el) el.classList.toggle('done', checkedIngs.has(k));
+}
+function closeCookMode() {
+  stopCookTimer();
+  checkedIngs.clear();
+  document.getElementById('cook-root').innerHTML = '';
+  if (cookModeId) openDetail(cookModeId);
+}
+
+// ══════════════════════════════════════════════
+// ADD / EDIT MODAL
+// ══════════════════════════════════════════════
+function openAdd() { editId = null; activeModalTab = 'basics'; renderModal(null); }
+function openEdit(id) { editId = id; activeModalTab = 'basics'; renderModal(db.recipes.find(r=>r.id===id)); }
+
+function switchTab(t) {
+  activeModalTab = t;
+  document.querySelectorAll('.modal-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.dataset.tab===t));
+}
+
+function renderModal(r) {
+  r = r || {};
+  const ings = r.ingredients?.length ? r.ingredients : [''];
+  const steps = r.steps?.length ? r.steps : [''];
+  const html = `<div class="modal-bg" onclick="bgClose(event,this)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">${editId ? 'Edit Recipe' : 'New Recipe'}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs">
+          <button class="modal-tab ${activeModalTab==='basics'?'active':''}" data-tab="basics" onclick="switchTab('basics')">Basics</button>
+          <button class="modal-tab ${activeModalTab==='ingredients'?'active':''}" data-tab="ingredients" onclick="switchTab('ingredients')">Ingredients</button>
+          <button class="modal-tab ${activeModalTab==='method'?'active':''}" data-tab="method" onclick="switchTab('method')">Method</button>
+          <button class="modal-tab ${activeModalTab==='notes'?'active':''}" data-tab="notes" onclick="switchTab('notes')">Notes & Photo</button>
+        </div>
+        <div class="tab-panel ${activeModalTab==='basics'?'active':''}" data-tab="basics">
+          <div class="form-grid">
+            <div class="fg span2"><label class="lbl">Title *</label><input class="fi" id="f-title" type="text" placeholder="e.g. Pasta Carbonara" value="${x(r.title||'')}"></div>
+            <div class="fg span2"><label class="lbl">Short description</label><input class="fi" id="f-desc" type="text" placeholder="One sentence tagline…" value="${x(r.description||'')}"></div>
+            <div class="fg"><label class="lbl">Category</label>
+              <select class="fi" id="f-cat"><option value="">— Select —</option>${CATS.map(c=>`<option value="${c.id}"${r.category===c.id?' selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
+            </div>
+            <div class="fg"><label class="lbl">Course</label>
+              <select class="fi" id="f-course"><option value="">— Select —</option>${COURSES.map(c=>`<option${r.course===c?' selected':''}>${c}</option>`).join('')}</select>
+            </div>
+            <div class="fg"><label class="lbl">Prep time</label><input class="fi" id="f-prep" type="text" placeholder="e.g. 15 min" value="${x(r.prepTime||'')}"></div>
+            <div class="fg"><label class="lbl">Cook time</label><input class="fi" id="f-cook" type="text" placeholder="e.g. 30 min" value="${x(r.cookTime||'')}"></div>
+            <div class="fg"><label class="lbl">Total time</label><input class="fi" id="f-total" type="text" placeholder="e.g. 45 min" value="${x(r.totalTime||'')}"></div>
+            <div class="fg"><label class="lbl">Servings</label><input class="fi" id="f-serv" type="number" min="1" placeholder="4" value="${r.servings||''}"></div>
+            <div class="fg"><label class="lbl">Difficulty</label>
+              <select class="fi" id="f-diff"><option value="">— Select —</option>${DIFFS.map(d=>`<option${r.difficulty===d?' selected':''}>${d}</option>`).join('')}</select>
+            </div>
+            <div class="fg"><label class="lbl">Season</label>
+              <select class="fi" id="f-season"><option value="">— Select —</option>${SEASONS.map(s=>`<option${r.season===s?' selected':''}>${s}</option>`).join('')}</select>
+            </div>
+            <div class="fg"><label class="lbl">Source / inspiration</label><input class="fi" id="f-source" type="text" placeholder="e.g. Grandma, book title…" value="${x(r.source||'')}"></div>
+            <div class="fg"><label class="lbl">Tags (comma separated)</label><input class="fi" id="f-tags" type="text" placeholder="quick, summer, italian" value="${(r.tags||[]).join(', ')}"></div>
+          </div>
+        </div>
+        <div class="tab-panel ${activeModalTab==='ingredients'?'active':''}" data-tab="ingredients">
+          <p style="font-size:0.8rem;color:var(--text-4);margin-bottom:1.1rem;">Tip: Start with quantity for smart scaling. e.g. <em>"200g plain flour"</em> or <em>"3 eggs"</em></p>
+          <div class="dyn-list" id="ing-list">
+            ${ings.map((v,i)=>`<div class="dyn-row" id="ir-${i}"><span class="row-n">${i+1}</span><input class="fi" type="text" id="i-${i}" value="${x(v)}" placeholder="e.g. 200g plain flour"><button class="btn-row-rm" onclick="rmRow('ing-list','ir-${i}')" type="button">−</button></div>`).join('')}
+          </div>
+          <button class="btn-add-row" onclick="addIng()" type="button">+ Add ingredient</button>
+        </div>
+        <div class="tab-panel ${activeModalTab==='method'?'active':''}" data-tab="method">
+          <p style="font-size:0.8rem;color:var(--text-4);margin-bottom:1.1rem;">Tip: Include time references like <em>"cook for 10 minutes"</em> — Cook Mode will detect timers automatically.</p>
+          <div class="dyn-list" id="step-list">
+            ${steps.map((v,i)=>`<div class="dyn-row" id="sr-${i}"><span class="row-n">${i+1}</span><textarea class="fi" id="s-${i}" rows="2" placeholder="Step ${i+1}…">${x(v)}</textarea><button class="btn-row-rm" onclick="rmRow('step-list','sr-${i}')" type="button">−</button></div>`).join('')}
+          </div>
+          <button class="btn-add-row" onclick="addStep()" type="button">+ Add step</button>
+        </div>
+        <div class="tab-panel ${activeModalTab==='notes'?'active':''}" data-tab="notes">
+          <div class="form-section">
+            <div class="fg" style="margin-bottom:1rem;"><label class="lbl">Photo URL</label>
+              <input class="fi" id="f-img" type="url" placeholder="https://…" value="${x(r.image||'')}" oninput="prevImg(this.value)">
+              <div id="img-prev-wrap">${r.image ? `<img src="${r.image}" class="img-prev">` : `<div class="img-placeholder">Paste an image URL above</div>`}</div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="fg" style="margin-bottom:1rem;"><label class="lbl">Chef's notes / tips</label><textarea class="fi" id="f-notes" rows="4" placeholder="Any tips, variations or serving suggestions…">${x(r.notes||'')}</textarea></div>
+            <div class="toggle-row"><input type="checkbox" id="f-inbook" ${r.inBook?'checked':''}><label for="f-inbook">Include in book export</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" onclick="saveRec()">${editId ? 'Save Changes' : 'Add Recipe'}</button>
+        <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('modal-root').innerHTML = html;
+}
+
+function prevImg(url) {
+  const w = document.getElementById('img-prev-wrap');
+  if (!w) return;
+  w.innerHTML = url ? `<img src="${url}" class="img-prev" onerror="this.style.opacity=0.3">` : `<div class="img-placeholder">Paste an image URL above</div>`;
+}
+
+function addIng() {
+  const l = document.getElementById('ing-list');
+  const n = l.querySelectorAll('.dyn-row').length;
+  const d = document.createElement('div');
+  d.className = 'dyn-row'; d.id = 'ir-'+n;
+  d.innerHTML = `<span class="row-n">${n+1}</span><input class="fi" type="text" id="i-${n}" placeholder="Ingredient…"><button class="btn-row-rm" onclick="rmRow('ing-list','ir-${n}')" type="button">−</button>`;
+  l.appendChild(d); l.lastElementChild.querySelector('input').focus();
+}
+function addStep() {
+  const l = document.getElementById('step-list');
+  const n = l.querySelectorAll('.dyn-row').length;
+  const d = document.createElement('div');
+  d.className = 'dyn-row'; d.id = 'sr-'+n;
+  d.innerHTML = `<span class="row-n">${n+1}</span><textarea class="fi" id="s-${n}" rows="2" placeholder="Step ${n+1}…"></textarea><button class="btn-row-rm" onclick="rmRow('step-list','sr-${n}')" type="button">−</button>`;
+  l.appendChild(d); l.lastElementChild.querySelector('textarea').focus();
+}
+function rmRow(listId, rowId) {
+  document.getElementById(rowId)?.remove();
+  renumber(listId);
+}
+function renumber(listId) {
+  document.getElementById(listId)?.querySelectorAll('.row-n').forEach((el,i)=>el.textContent=i+1);
+}
+function getList(prefix, listId) {
+  return Array.from(document.getElementById(listId)?.querySelectorAll('input,textarea')||[]).map(e=>e.value.trim()).filter(Boolean);
+}
+
+function saveRec() {
+  const title = document.getElementById('f-title')?.value.trim();
+  if (!title) { toast('Please enter a title', 'err'); switchTab('basics'); return; }
+  const existing = editId ? db.recipes.find(r=>r.id===editId) : null;
+  const rec = {
+    id: editId || ('r'+Date.now()+Math.random().toString(36).slice(2,6)),
+    title,
+    description: document.getElementById('f-desc')?.value.trim()||'',
+    category: document.getElementById('f-cat')?.value||'',
+    course: document.getElementById('f-course')?.value||'',
+    prepTime: document.getElementById('f-prep')?.value.trim()||'',
+    cookTime: document.getElementById('f-cook')?.value.trim()||'',
+    totalTime: document.getElementById('f-total')?.value.trim()||'',
+    servings: document.getElementById('f-serv')?.value||'',
+    difficulty: document.getElementById('f-diff')?.value||'',
+    season: document.getElementById('f-season')?.value||'',
+    source: document.getElementById('f-source')?.value.trim()||'',
+    tags: (document.getElementById('f-tags')?.value||'').split(',').map(t=>t.trim()).filter(Boolean),
+    image: document.getElementById('f-img')?.value.trim()||'',
+    ingredients: getList('i-','ing-list'),
+    steps: getList('s-','step-list'),
+    notes: document.getElementById('f-notes')?.value.trim()||'',
+    inBook: document.getElementById('f-inbook')?.checked||false,
+    rating: existing?.rating||0,
+    cookCount: existing?.cookCount||0,
+    lastCooked: existing?.lastCooked||null,
+    createdAt: existing?.createdAt||Date.now(),
+    updatedAt: Date.now(),
+  };
+  if (editId) { const i = db.recipes.findIndex(r=>r.id===editId); if(i>-1) db.recipes[i]=rec; }
+  else db.recipes.unshift(rec);
+  save(); closeModal();
+  toast(editId ? 'Recipe updated ✓' : 'Recipe added ✓', 'ok');
+  openDetail(rec.id);
+}
+
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+function bgClose(e, el) { if (e.target === el) closeModal(); }
+
+// ══════════════════════════════════════════════
+// BOOK PAGE
+// ══════════════════════════════════════════════
+function renderBook() {
+  const inBook = db.recipes.filter(r=>r.inBook);
+  const all = [...db.recipes].sort((a,b)=>a.title.localeCompare(b.title));
+  return `<div class="wrap page-fade">
+    <div class="book-hero">
+      <div>
+        <h2>Export Cookbook</h2>
+        <p>Compile your favourite recipes into a beautiful book.</p>
+      </div>
+      <div>
+        <div class="book-stat-n">${inBook.length}</div>
+        <div class="book-stat-l">recipes selected</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Book details</div>
+      <div class="settings-3">
+        <div class="fg"><label class="lbl">Book title</label><input class="fi" id="bs-title" type="text" value="${x(bs.title)}" oninput="bs.title=this.value"></div>
+        <div class="fg"><label class="lbl">Subtitle</label><input class="fi" id="bs-sub" type="text" value="${x(bs.subtitle)}" oninput="bs.subtitle=this.value"></div>
+        <div class="fg"><label class="lbl">Author</label><input class="fi" id="bs-auth" type="text" placeholder="Your name" value="${x(bs.author)}" oninput="bs.author=this.value"></div>
+        <div class="fg span2" style="grid-column:1/-1;"><label class="lbl">Introduction (optional)</label><textarea class="fi" id="bs-intro" rows="3" placeholder="A few opening words…" oninput="bs.intro=this.value">${x(bs.intro)}</textarea></div>
+        <div class="fg"><label class="lbl">Organise by</label>
+          <select class="fi" onchange="bs.groupBy=this.value">
+            <option value="category" ${bs.groupBy==='category'?'selected':''}>Category</option>
+            <option value="course" ${bs.groupBy==='course'?'selected':''}>Course</option>
+            <option value="alphabetical" ${bs.groupBy==='alphabetical'?'selected':''}>Alphabetical</option>
+          </select>
+        </div>
+        <div class="fg" style="justify-content:flex-end;gap:0.6rem;padding-top:1.35rem;">
+          <div class="toggle-row"><input type="checkbox" id="bs-photos" ${bs.photos?'checked':''} onchange="bs.photos=this.checked"><label for="bs-photos">Include photos</label></div>
+          <div class="toggle-row"><input type="checkbox" id="bs-notes" ${bs.notes?'checked':''} onchange="bs.notes=this.checked"><label for="bs-notes">Include notes</label></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Select recipes</div>
+      <div class="sel-controls">
+        <button class="sel-ctrl-btn" onclick="selAll(true)">Select all (${all.length})</button>
+        <button class="sel-ctrl-btn" onclick="selAll(false)">Deselect all</button>
+      </div>
+      ${all.length ? `<div class="recipe-sel-grid" id="sel-grid">
+        ${all.map(r=>{
+          const c = cat(r.category);
+          return `<div class="sel-item ${r.inBook?'on':''}" onclick="togSel('${r.id}',this)" id="si-${r.id}">
+            <input type="checkbox" ${r.inBook?'checked':''} id="sc-${r.id}" onclick="event.stopPropagation();togSel('${r.id}',this.closest('.sel-item'))">
+            <div style="overflow:hidden;flex:1;">
+              <div class="sel-item-name">${r.title}</div>
+              <div class="sel-item-sub">${c?c.icon+' '+c.name:''} ${r.rating?'★'.repeat(r.rating):''}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : `<p style="font-size:0.85rem;color:var(--text-4);">No recipes yet.</p>`}
+    </div>
+    <div class="panel">
+      <div class="panel-title">Export</div>
+      <div class="export-row">
+        <button class="export-btn dark" onclick="exportPDF()">
+          <span class="export-btn-icon">↓</span>
+          <span class="export-btn-label">Export PDF</span>
+          <span class="export-btn-sub">Print-ready cookbook layout</span>
+        </button>
+        <button class="export-btn" onclick="exportWord()">
+          <span class="export-btn-icon">↓</span>
+          <span class="export-btn-label">Export Word (.doc)</span>
+          <span class="export-btn-sub">Editable in Microsoft Word</span>
+        </button>
+        <button class="export-btn" onclick="exportJSON()">
+          <span class="export-btn-icon">↓</span>
+          <span class="export-btn-label">Backup (.json)</span>
+          <span class="export-btn-sub">All recipes, all data</span>
+        </button>
+      </div>
+    </div>
+    <div class="import-zone">
+      <p>Restore from backup:</p>
+      <input type="file" accept=".json" onchange="importJSON(this)">
+    </div>
+  </div>`;
+}
+
+function togSel(id, el) {
+  const r = db.recipes.find(x=>x.id===id);
+  if (!r) return;
+  r.inBook = !r.inBook; save();
+  if (el.classList.contains('sel-item')) {
+    el.classList.toggle('on', r.inBook);
+    const chk = document.getElementById('sc-'+id);
+    if (chk) chk.checked = r.inBook;
+  }
+  const stat = document.querySelector('.book-stat-n');
+  if (stat) stat.textContent = db.recipes.filter(x=>x.inBook).length;
+}
+function selAll(v) { db.recipes.forEach(r=>r.inBook=v); save(); showPage('book'); }
+
+// ══════════════════════════════════════════════
+// PRINT
+// ══════════════════════════════════════════════
+function printRec(id) {
+  const r = db.recipes.find(x=>x.id===id);
+  if (!r) return;
+  const c = cat(r.category);
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>${r.title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>body{font-family:'Lato',sans-serif;max-width:620px;margin:2.5rem auto;color:#1E1A16;font-size:14px;line-height:1.7;}h1{font-family:'Playfair Display',serif;font-size:2rem;margin-bottom:0.4rem;letter-spacing:-0.02em;}h2{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;margin:1.75rem 0 0.6rem;border-bottom:1px solid #E0D9CF;padding-bottom:4px;}.meta{display:flex;flex-wrap:wrap;gap:1rem;color:#9E9589;font-size:0.75rem;margin-bottom:1.5rem;letter-spacing:0.06em;text-transform:uppercase;font-family:monospace;}ul{padding-left:1.2rem;}li{margin-bottom:0.4rem;}.step{display:flex;gap:0.85rem;margin-bottom:1rem;}.n{background:#C1633A;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:bold;flex-shrink:0;color:white;margin-top:2px;}.notes{background:#F7F3EE;padding:14px 16px;margin-top:1.25rem;font-style:italic;font-size:0.88rem;color:#6B6358;border-left:3px solid #C1633A;}@media print{body{margin:0.5cm;}}</style></head><body>
+  ${r.image?`<img src="${r.image}" style="width:100%;height:200px;object-fit:cover;border-radius:6px;margin-bottom:1.5rem;">`:'' }
+  ${c?`<div style="font-family:monospace;font-size:0.68rem;letter-spacing:0.14em;text-transform:uppercase;color:#9E9589;margin-bottom:0.4rem;">${c.icon} ${c.name}</div>`:''}
+  <h1>${r.title}</h1>
+  ${r.description ? `<p style="color:#6B6358;font-style:italic;font-family:'Playfair Display',serif;margin-bottom:1rem;">${r.description}</p>` : ''}
+  <div class="meta">${[r.prepTime&&'Prep: '+r.prepTime,r.cookTime&&'Cook: '+r.cookTime,r.servings&&'Serves '+r.servings,r.difficulty].filter(Boolean).join(' · ')}</div>
+  ${r.ingredients?.length?`<h2>Ingredients</h2><ul>${r.ingredients.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
+  ${r.steps?.length?`<h2>Method</h2>${r.steps.map((s,i)=>`<div class="step"><div class="n">${i+1}</div><div>${s}</div></div>`).join('')}`:''}
+  ${r.notes?`<div class="notes"><b>Notes:</b> ${r.notes}</div>`:''}
+  </body></html>`);
+  w.document.close(); w.print();
+}
+
+// ══════════════════════════════════════════════
+// EXPORT (PDF / WORD)
+// ══════════════════════════════════════════════
+function sortBook(recs) {
+  if (bs.groupBy==='alphabetical') return [...recs].sort((a,b)=>a.title.localeCompare(b.title));
+  if (bs.groupBy==='category') return [...recs].sort((a,b)=>{const ai=CATS.findIndex(c=>c.id===a.category),bi=CATS.findIndex(c=>c.id===b.category);return ai!==bi?ai-bi:a.title.localeCompare(b.title);});
+  if (bs.groupBy==='course') return [...recs].sort((a,b)=>{const ai=COURSES.indexOf(a.course||''),bi=COURSES.indexOf(b.course||'');return ai!==bi?ai-bi:a.title.localeCompare(b.title);});
+  return recs;
+}
+function getGroup(r) {
+  if (bs.groupBy==='category') return cat(r.category)?.name||'Other';
+  if (bs.groupBy==='course') return r.course||'Other';
+  return '';
+}
+
+function exportPDF() {
+  const recs = db.recipes.filter(r=>r.inBook);
+  if (!recs.length) { toast('No recipes selected', 'err'); return; }
+  loading('Building PDF…');
+  setTimeout(()=>{
+    try {
+      const {jsPDF} = window.jspdf;
+      const doc = new jsPDF({unit:'mm',format:'a4'});
+      const W=210,H=297,mg=22,cw=W-mg*2;
+      const sf=(style,sz,rgb)=>{doc.setFont('helvetica',style||'normal');doc.setFontSize(sz||10);doc.setTextColor(...(rgb||[30,26,22]));};
+      const ln=(x1,y1,x2,y2,rgb,lw)=>{doc.setDrawColor(...(rgb||[224,217,207]));doc.setLineWidth(lw||0.3);doc.line(x1,y1,x2,y2);};
+
+      // COVER
+      doc.setFillColor(30,26,22);doc.rect(0,0,W,H,'F');
+      doc.setFillColor(193,99,58);doc.rect(0,H-12,W,12,'F');
+      sf('bolditalic',34,[247,243,238]);
+      const tls=doc.splitTextToSize(bs.title||'My Recipe Collection',cw-10);
+      let ty=85;tls.forEach(tl=>{doc.text(tl,W/2,ty,{align:'center'});ty+=13;});
+      if(bs.subtitle){sf('italic',13,[154,154,148]);doc.text(bs.subtitle,W/2,ty+5,{align:'center'});ty+=14;}
+      ln(mg+20,ty+8,W-mg-20,ty+8,[100,90,80],0.5);
+      if(bs.author){sf('normal',11,[154,154,148]);doc.text(bs.author,W/2,ty+18,{align:'center'});}
+      sf('normal',8,[193,99,58]);doc.text(recs.length+' recipes',W/2,H-6,{align:'center'});
+
+      // TOC
+      doc.addPage();
+      doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');
+      sf('bolditalic',22,[30,26,22]);doc.text('Contents',mg,38);
+      ln(mg,43,W-mg,43,[224,217,207],0.4);
+      let ty2=55;const sorted=sortBook(recs);let lg='';
+      sorted.forEach((r,i)=>{
+        const g=getGroup(r);
+        if(bs.groupBy!=='alphabetical'&&g!==lg){
+          if(ty2>H-20){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');ty2=25;}
+          sf('bold',7.5,[193,99,58]);doc.text(g.toUpperCase(),mg,ty2);ty2+=7;lg=g;
+        }
+        if(ty2>H-18){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');ty2=25;}
+        sf('normal',9,[30,26,22]);doc.text('  '+r.title,mg,ty2);
+        sf('normal',9,[154,154,148]);doc.text((i+3).toString(),W-mg,ty2,{align:'right'});
+        ty2+=5.6;
+      });
+
+      if(bs.intro){
+        doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');
+        sf('bolditalic',18,[30,26,22]);doc.text('A Note',mg,35);
+        ln(mg,40,W-mg,40,[224,217,207],0.4);
+        sf('italic',10,[107,99,88]);
+        const il=doc.splitTextToSize(bs.intro,cw);let iy=52;
+        il.forEach(l=>{if(iy>H-25){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');iy=25;}doc.text(l,mg,iy);iy+=5.8;});
+      }
+
+      lg='';
+      sorted.forEach(r=>{
+        const g=getGroup(r);
+        if(bs.groupBy!=='alphabetical'&&g!==lg){
+          doc.addPage();
+          doc.setFillColor(30,26,22);doc.rect(0,0,W,H,'F');
+          doc.setFillColor(193,99,58);doc.rect(0,H/2-1,W,2,'F');
+          sf('bolditalic',26,[247,243,238]);doc.text(g,W/2,H/2+10,{align:'center'});
+          lg=g;
+        }
+        doc.addPage();
+        doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');
+        doc.setFillColor(193,99,58);doc.rect(0,0,W,52,'F');
+        const c=cat(r.category);let y=mg;
+        if(c){sf('normal',7.5,[255,255,255]);doc.text((c.name+' '+(r.course?'/ '+r.course:'')).toUpperCase(),mg,y+5);}
+        sf('bolditalic',19,[255,255,255]);
+        const ttl=doc.splitTextToSize(r.title,cw-5);let tcy=y+14;
+        ttl.forEach(t=>{doc.text(t,mg,tcy);tcy+=8;});
+        if(r.description){sf('italic',9,[255,220,200]);const dl=doc.splitTextToSize(r.description,cw-5);dl.slice(0,1).forEach(l=>{doc.text(l,mg,tcy);tcy+=5;});}
+        y=62;
+        const mts=[r.prepTime&&'Prep '+r.prepTime,r.cookTime&&'Cook '+r.cookTime,r.servings&&'Serves '+r.servings,r.difficulty].filter(Boolean);
+        sf('normal',7.5,[154,154,148]);doc.text(mts.join('   ·   '),mg,y);y+=9;
+        const clW=72,crX=mg+clW+6,crW=cw-clW-6;
+        let yL=y,yR=y;
+        sf('bold',8,[193,99,58]);doc.text('INGREDIENTS',mg,yL);yL+=5;
+        ln(mg,yL,mg+clW,yL,[224,217,207],0.3);yL+=4;
+        (r.ingredients||[]).forEach(ing=>{
+          sf('normal',8.5,[58,52,48]);
+          const ll=doc.splitTextToSize('· '+ing,clW);
+          ll.forEach(l=>{if(yL>H-22)return;doc.text(l,mg,yL);yL+=4.8;});
+        });
+        sf('bold',8,[193,99,58]);doc.text('METHOD',crX,yR);yR+=5;
+        ln(crX,yR,crX+crW,yR,[224,217,207],0.3);yR+=4;
+        (r.steps||[]).forEach((s,i)=>{
+          if(yR>H-25){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');yR=mg;}
+          doc.setFillColor(193,99,58);doc.circle(crX+3.5,yR-1,3.5,'F');
+          sf('bold',7.5,[255,255,255]);doc.text((i+1).toString(),crX+3.5,yR-0.3,{align:'center'});
+          sf('normal',8.5,[58,52,48]);
+          const sl=doc.splitTextToSize(s,crW-11);
+          sl.forEach(l=>{if(yR>H-22)return;doc.text(l,crX+10,yR);yR+=4.8;});
+          yR+=2;
+        });
+        if(bs.notes&&r.notes){
+          const ny=Math.max(yL,yR)+6;
+          if(ny<H-30){
+            const nl=doc.splitTextToSize(r.notes,cw-8);
+            doc.setFillColor(240,234,224);doc.setDrawColor(193,99,58);doc.setLineWidth(0.5);
+            doc.rect(mg,ny-3,cw,nl.length*4.8+9,'FD');
+            sf('bold',7,[193,99,58]);doc.text('NOTES',mg+4,ny+2);
+            sf('italic',8,[107,99,88]);nl.forEach((l,i)=>doc.text(l,mg+4,ny+7+i*4.8));
+          }
+        }
+        ln(mg,H-14,W-mg,H-14,[224,217,207],0.2);
+        sf('normal',7,[154,154,148]);
+        doc.text(bs.title||'Recipe Journal',mg,H-10);
+        doc.text(String(doc.getCurrentPageInfo().pageNumber),W-mg,H-10,{align:'right'});
+      });
+
+      const fn=(bs.title||'recipes').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.pdf';
+      doc.save(fn);hideLoading();toast('PDF downloaded ✓','ok');
+    } catch(e){hideLoading();console.error(e);toast('PDF error. Try fewer recipes.','err');}
+  },80);
+}
+
+function exportWord() {
+  const recs = db.recipes.filter(r=>r.inBook);
+  if (!recs.length) { toast('No recipes selected','err'); return; }
+  loading('Building Word document…');
+  setTimeout(()=>{
+    const sorted=sortBook(recs);let lg='',body='';
+    body+=`<h1 style="text-align:center;font-family:Georgia,serif;font-size:28pt;letter-spacing:-1px;">${bs.title||'My Recipe Collection'}</h1>`;
+    if(bs.subtitle) body+=`<h2 style="text-align:center;font-weight:normal;color:#9E9589;">${bs.subtitle}</h2>`;
+    if(bs.author) body+=`<p style="text-align:center;color:#9E9589;">${bs.author}</p>`;
+    body+=`<p style="text-align:center;color:#C1633A;">${recs.length} Recipes</p><hr>`;
+    if(bs.intro) body+=`<div style="page-break-before:always;"><h2>Introduction</h2><p style="font-style:italic;color:#6B6358;">${bs.intro}</p></div>`;
+    body+=`<div style="page-break-before:always;"><h2>Contents</h2><hr>`;
+    sorted.forEach(r=>{body+=`<p style="margin:4px 0;">${r.title}</p>`;});
+    body+=`</div>`;
+    sorted.forEach(r=>{
+      const g=getGroup(r);const c=cat(r.category);
+      if(bs.groupBy!=='alphabetical'&&g!==lg){body+=`<div style="page-break-before:always;background:#1E1A16;padding:40px;text-align:center;"><h1 style="color:#F7F3EE;font-family:Georgia,serif;">${g}</h1></div>`;lg=g;}
+      const mts=[c&&c.name,r.prepTime&&'Prep: '+r.prepTime,r.cookTime&&'Cook: '+r.cookTime,r.servings&&'Serves '+r.servings,r.difficulty].filter(Boolean);
+      body+=`<div style="page-break-before:always;font-family:Georgia,serif;">`;
+      body+=`<h1 style="font-size:22pt;border-bottom:2px solid #C1633A;padding-bottom:8px;">${r.title}</h1>`;
+      if(r.description) body+=`<p style="font-style:italic;color:#6B6358;">${r.description}</p>`;
+      if(mts.length) body+=`<p style="font-size:9pt;color:#9E9589;">${mts.join(' · ')}</p>`;
+      if(r.ingredients?.length){body+=`<h2>Ingredients</h2><ul>`;r.ingredients.forEach(i=>body+=`<li>${i}</li>`);body+=`</ul>`;}
+      if(r.steps?.length){body+=`<h2>Method</h2><ol>`;r.steps.forEach(s=>body+=`<li style="margin-bottom:8px;">${s}</li>`);body+=`</ol>`;}
+      if(bs.notes&&r.notes) body+=`<div style="background:#F7F3EE;border-left:3px solid #C1633A;padding:12px;margin-top:12px;font-size:0.9em;font-style:italic;color:#6B6358;"><b>Notes:</b> ${r.notes}</div>`;
+      body+=`</div>`;
+    });
+    const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${bs.title||'Recipes'}</title></head><body style="font-family:Georgia,serif;max-width:700px;margin:2cm auto;color:#1E1A16;">${body}</body></html>`;
+    const blob=new Blob([html],{type:'application/msword'});
+    const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:(bs.title||'recipes').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.doc'});
+    a.click();URL.revokeObjectURL(a.href);
+    hideLoading();toast('Word document downloaded','ok');
+  },80);
+}
+
+function exportJSON() {
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'})),download:'recipe_backup_'+new Date().toISOString().slice(0,10)+'.json'});
+  a.click();URL.revokeObjectURL(a.href);toast('Backup downloaded','ok');
+}
+function importJSON(input) {
+  const f=input.files[0];if(!f)return;
+  const fr=new FileReader();
+  fr.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!d.recipes) throw 0;
+      if(confirm(`Import ${d.recipes.length} recipes?`)){
+        const ex=new Set(db.recipes.map(r=>r.id));
+        d.recipes.forEach(r=>{if(!ex.has(r.id))db.recipes.push(r);});save();
+        showPage('browse');toast('Imported '+d.recipes.length+' recipes','ok');
+      }
+    }catch{toast('Invalid file','err');}
+  };
+  fr.readAsText(f);
+}
+
+// ══════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════
+function x(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg,type){const t=document.getElementById('toast-el');t.textContent=msg;t.className='toast '+(type||'');t.style.display='flex';clearTimeout(window._tt);window._tt=setTimeout(()=>t.style.display='none',3200);}
+function loading(msg){document.getElementById('loading-msg').textContent=msg||'Working…';document.getElementById('loading-el').style.display='flex';}
+function hideLoading(){document.getElementById('loading-el').style.display='none';}
+
+// KEYBOARD SHORTCUTS
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('cook-root').innerHTML) closeCookMode();
+    else closeModal();
+  }
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openAdd();}
+});
+
+// INIT
+showPage('home');
+</script>
+</body>
+</html>
