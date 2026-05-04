@@ -2088,118 +2088,183 @@ function getGroup(r) {
   return '';
 }
 
-function exportPDF() {
+// Fetch an image URL and return a base64 data-URL via canvas (handles CORS gracefully)
+async function imgToDataUrl(url) {
+  if (!url) return null;
+  // If already a data URL, use as-is
+  if (url.startsWith('data:')) return url;
+  try {
+    // Try fetching with cors mode first
+    const res = await fetch(url, {mode:'cors'});
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    // Fallback: draw to canvas via an Image element
+    return await new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        } catch { resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  }
+}
+
+async function exportPDF() {
   const recs = db.recipes.filter(r=>r.inBook);
   if (!recs.length) { toast('No recipes selected', 'err'); return; }
+  loading('Fetching images…');
+
+  // Pre-fetch all images
+  const imgCache = {};
+  if (bs.photos) {
+    const urls = [...new Set(recs.map(r=>r.image).filter(Boolean))];
+    await Promise.all(urls.map(async url => {
+      imgCache[url] = await imgToDataUrl(url);
+    }));
+  }
+
   loading('Building PDF…');
-  setTimeout(()=>{
-    try {
-      const {jsPDF} = window.jspdf;
-      const doc = new jsPDF({unit:'mm',format:'a4'});
-      const W=210,H=297,mg=22,cw=W-mg*2;
-      const sf=(style,sz,rgb)=>{doc.setFont('helvetica',style||'normal');doc.setFontSize(sz||10);doc.setTextColor(...(rgb||[30,26,22]));};
-      const ln=(x1,y1,x2,y2,rgb,lw)=>{doc.setDrawColor(...(rgb||[224,217,207]));doc.setLineWidth(lw||0.3);doc.line(x1,y1,x2,y2);};
+  await new Promise(r=>setTimeout(r,30));
 
-      // COVER
-      doc.setFillColor(30,26,22);doc.rect(0,0,W,H,'F');
-      doc.setFillColor(193,99,58);doc.rect(0,H-12,W,12,'F');
-      sf('bolditalic',34,[247,243,238]);
-      const tls=doc.splitTextToSize(bs.title||'My Recipe Collection',cw-10);
-      let ty=85;tls.forEach(tl=>{doc.text(tl,W/2,ty,{align:'center'});ty+=13;});
-      if(bs.subtitle){sf('italic',13,[154,154,148]);doc.text(bs.subtitle,W/2,ty+5,{align:'center'});ty+=14;}
-      ln(mg+20,ty+8,W-mg-20,ty+8,[100,90,80],0.5);
-      if(bs.author){sf('normal',11,[154,154,148]);doc.text(bs.author,W/2,ty+18,{align:'center'});}
-      sf('normal',8,[193,99,58]);doc.text(recs.length+' recipes',W/2,H-6,{align:'center'});
+  try {
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({unit:'mm',format:'a4'});
+    const W=210,H=297,mg=22,cw=W-mg*2;
+    const sf=(style,sz,rgb)=>{doc.setFont('helvetica',style||'normal');doc.setFontSize(sz||10);doc.setTextColor(...(rgb||[30,26,22]));};
+    const ln=(x1,y1,x2,y2,rgb,lw)=>{doc.setDrawColor(...(rgb||[224,217,207]));doc.setLineWidth(lw||0.3);doc.line(x1,y1,x2,y2);};
 
-      // TOC
+    // COVER
+    doc.setFillColor(30,26,22);doc.rect(0,0,W,H,'F');
+    doc.setFillColor(193,99,58);doc.rect(0,H-12,W,12,'F');
+    sf('bolditalic',34,[247,243,238]);
+    const tls=doc.splitTextToSize(bs.title||'My Recipe Collection',cw-10);
+    let ty=85;tls.forEach(tl=>{doc.text(tl,W/2,ty,{align:'center'});ty+=13;});
+    if(bs.subtitle){sf('italic',13,[154,154,148]);doc.text(bs.subtitle,W/2,ty+5,{align:'center'});ty+=14;}
+    ln(mg+20,ty+8,W-mg-20,ty+8,[100,90,80],0.5);
+    if(bs.author){sf('normal',11,[154,154,148]);doc.text(bs.author,W/2,ty+18,{align:'center'});}
+    sf('normal',8,[193,99,58]);doc.text(recs.length+' recipes',W/2,H-6,{align:'center'});
+
+    // TOC
+    doc.addPage();
+    doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');
+    sf('bolditalic',22,[30,26,22]);doc.text('Contents',mg,38);
+    ln(mg,43,W-mg,43,[224,217,207],0.4);
+    let ty2=55;const sorted=sortBook(recs);let lg='';
+    sorted.forEach((r,i)=>{
+      const g=getGroup(r);
+      if(bs.groupBy!=='alphabetical'&&g!==lg){
+        if(ty2>H-20){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');ty2=25;}
+        sf('bold',7.5,[193,99,58]);doc.text(g.toUpperCase(),mg,ty2);ty2+=7;lg=g;
+      }
+      if(ty2>H-18){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');ty2=25;}
+      sf('normal',9,[30,26,22]);doc.text('  '+r.title,mg,ty2);
+      sf('normal',9,[154,154,148]);doc.text((i+3).toString(),W-mg,ty2,{align:'right'});
+      ty2+=5.6;
+    });
+
+    if(bs.intro){
+      doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');
+      sf('bolditalic',18,[30,26,22]);doc.text('A Note',mg,35);
+      ln(mg,40,W-mg,40,[224,217,207],0.4);
+      sf('italic',10,[107,99,88]);
+      const il=doc.splitTextToSize(bs.intro,cw);let iy=52;
+      il.forEach(l=>{if(iy>H-25){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');iy=25;}doc.text(l,mg,iy);iy+=5.8;});
+    }
+
+    lg='';
+    sorted.forEach(r=>{
+      const g=getGroup(r);
+      if(bs.groupBy!=='alphabetical'&&g!==lg){
+        doc.addPage();
+        doc.setFillColor(30,26,22);doc.rect(0,0,W,H,'F');
+        doc.setFillColor(193,99,58);doc.rect(0,H/2-1,W,2,'F');
+        sf('bolditalic',26,[247,243,238]);doc.text(g,W/2,H/2+10,{align:'center'});
+        lg=g;
+      }
       doc.addPage();
       doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');
-      sf('bolditalic',22,[30,26,22]);doc.text('Contents',mg,38);
-      ln(mg,43,W-mg,43,[224,217,207],0.4);
-      let ty2=55;const sorted=sortBook(recs);let lg='';
-      sorted.forEach((r,i)=>{
-        const g=getGroup(r);
-        if(bs.groupBy!=='alphabetical'&&g!==lg){
-          if(ty2>H-20){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');ty2=25;}
-          sf('bold',7.5,[193,99,58]);doc.text(g.toUpperCase(),mg,ty2);ty2+=7;lg=g;
-        }
-        if(ty2>H-18){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');ty2=25;}
-        sf('normal',9,[30,26,22]);doc.text('  '+r.title,mg,ty2);
-        sf('normal',9,[154,154,148]);doc.text((i+3).toString(),W-mg,ty2,{align:'right'});
-        ty2+=5.6;
-      });
 
-      if(bs.intro){
-        doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');
-        sf('bolditalic',18,[30,26,22]);doc.text('A Note',mg,35);
-        ln(mg,40,W-mg,40,[224,217,207],0.4);
-        sf('italic',10,[107,99,88]);
-        const il=doc.splitTextToSize(bs.intro,cw);let iy=52;
-        il.forEach(l=>{if(iy>H-25){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');iy=25;}doc.text(l,mg,iy);iy+=5.8;});
+      const imgData = bs.photos && r.image && imgCache[r.image];
+      const hasImg = !!imgData;
+      const headerH = hasImg ? 80 : 52;
+
+      // Header bar
+      doc.setFillColor(193,99,58);doc.rect(0,0,W,headerH,'F');
+
+      // Photo on right side of header
+      if(hasImg){
+        try{
+          doc.addImage(imgData,'JPEG',W-80,0,80,headerH,undefined,'FAST');
+          // Darken overlay on image area for text legibility
+          doc.setFillColor(30,26,22);doc.setGState&&doc.setGState(doc.GState({opacity:0.35}));
+          doc.rect(W-80,0,80,headerH,'F');
+          doc.setGState&&doc.setGState(doc.GState({opacity:1}));
+        }catch(e){}
       }
 
-      lg='';
-      sorted.forEach(r=>{
-        const g=getGroup(r);
-        if(bs.groupBy!=='alphabetical'&&g!==lg){
-          doc.addPage();
-          doc.setFillColor(30,26,22);doc.rect(0,0,W,H,'F');
-          doc.setFillColor(193,99,58);doc.rect(0,H/2-1,W,2,'F');
-          sf('bolditalic',26,[247,243,238]);doc.text(g,W/2,H/2+10,{align:'center'});
-          lg=g;
-        }
-        doc.addPage();
-        doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');
-        doc.setFillColor(193,99,58);doc.rect(0,0,W,52,'F');
-        const c=cat(r.category);let y=mg;
-        if(c){sf('normal',7.5,[255,255,255]);doc.text((c.name+' '+(r.course?'/ '+r.course:'')).toUpperCase(),mg,y+5);}
-        sf('bolditalic',19,[255,255,255]);
-        const ttl=doc.splitTextToSize(r.title,cw-5);let tcy=y+14;
-        ttl.forEach(t=>{doc.text(t,mg,tcy);tcy+=8;});
-        if(r.description){sf('italic',9,[255,220,200]);const dl=doc.splitTextToSize(r.description,cw-5);dl.slice(0,1).forEach(l=>{doc.text(l,mg,tcy);tcy+=5;});}
-        y=62;
-        const mts=[r.prepTime&&'Prep '+r.prepTime,r.cookTime&&'Cook '+r.cookTime,r.servings&&'Serves '+r.servings,r.difficulty].filter(Boolean);
-        sf('normal',7.5,[154,154,148]);doc.text(mts.join('   ·   '),mg,y);y+=9;
-        const clW=72,crX=mg+clW+6,crW=cw-clW-6;
-        let yL=y,yR=y;
-        sf('bold',8,[193,99,58]);doc.text('INGREDIENTS',mg,yL);yL+=5;
-        ln(mg,yL,mg+clW,yL,[224,217,207],0.3);yL+=4;
-        (r.ingredients||[]).forEach(ing=>{
-          sf('normal',8.5,[58,52,48]);
-          const ll=doc.splitTextToSize('· '+ing,clW);
-          ll.forEach(l=>{if(yL>H-22)return;doc.text(l,mg,yL);yL+=4.8;});
-        });
-        sf('bold',8,[193,99,58]);doc.text('METHOD',crX,yR);yR+=5;
-        ln(crX,yR,crX+crW,yR,[224,217,207],0.3);yR+=4;
-        (r.steps||[]).forEach((s,i)=>{
-          if(yR>H-25){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');yR=mg;}
-          doc.setFillColor(193,99,58);doc.circle(crX+3.5,yR-1,3.5,'F');
-          sf('bold',7.5,[255,255,255]);doc.text((i+1).toString(),crX+3.5,yR-0.3,{align:'center'});
-          sf('normal',8.5,[58,52,48]);
-          const sl=doc.splitTextToSize(s,crW-11);
-          sl.forEach(l=>{if(yR>H-22)return;doc.text(l,crX+10,yR);yR+=4.8;});
-          yR+=2;
-        });
-        if(bs.notes&&r.notes){
-          const ny=Math.max(yL,yR)+6;
-          if(ny<H-30){
-            const nl=doc.splitTextToSize(r.notes,cw-8);
-            doc.setFillColor(240,234,224);doc.setDrawColor(193,99,58);doc.setLineWidth(0.5);
-            doc.rect(mg,ny-3,cw,nl.length*4.8+9,'FD');
-            sf('bold',7,[193,99,58]);doc.text('NOTES',mg+4,ny+2);
-            sf('italic',8,[107,99,88]);nl.forEach((l,i)=>doc.text(l,mg+4,ny+7+i*4.8));
-          }
-        }
-        ln(mg,H-14,W-mg,H-14,[224,217,207],0.2);
-        sf('normal',7,[154,154,148]);
-        doc.text(bs.title||'Recipe Journal',mg,H-10);
-        doc.text(String(doc.getCurrentPageInfo().pageNumber),W-mg,H-10,{align:'right'});
-      });
+      const c=cat(r.category);let y=mg;
+      if(c){sf('normal',7.5,[255,255,255]);doc.text((c.name+' '+(r.course?'/ '+r.course:'')).toUpperCase(),mg,y+5);}
+      sf('bolditalic',19,[255,255,255]);
+      const ttl=doc.splitTextToSize(r.title,hasImg?cw-85:cw-5);let tcy=y+14;
+      ttl.forEach(t=>{doc.text(t,mg,tcy);tcy+=8;});
+      if(r.description){sf('italic',9,[255,220,200]);const dl=doc.splitTextToSize(r.description,hasImg?cw-85:cw-5);dl.slice(0,1).forEach(l=>{doc.text(l,mg,tcy);tcy+=5;});}
 
-      const fn=(bs.title||'recipes').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.pdf';
-      doc.save(fn);hideLoading();toast('PDF downloaded ✓','ok');
-    } catch(e){hideLoading();console.error(e);toast('PDF error. Try fewer recipes.','err');}
-  },80);
+      y=headerH+10;
+      const mts=[r.prepTime&&'Prep '+r.prepTime,r.cookTime&&'Cook '+r.cookTime,r.servings&&'Serves '+r.servings,r.difficulty].filter(Boolean);
+      sf('normal',7.5,[154,154,148]);doc.text(mts.join('   ·   '),mg,y);y+=9;
+      const clW=72,crX=mg+clW+6,crW=cw-clW-6;
+      let yL=y,yR=y;
+      sf('bold',8,[193,99,58]);doc.text('INGREDIENTS',mg,yL);yL+=5;
+      ln(mg,yL,mg+clW,yL,[224,217,207],0.3);yL+=4;
+      (r.ingredients||[]).forEach(ing=>{
+        sf('normal',8.5,[58,52,48]);
+        const ll=doc.splitTextToSize('· '+ing,clW);
+        ll.forEach(l=>{if(yL>H-22)return;doc.text(l,mg,yL);yL+=4.8;});
+      });
+      sf('bold',8,[193,99,58]);doc.text('METHOD',crX,yR);yR+=5;
+      ln(crX,yR,crX+crW,yR,[224,217,207],0.3);yR+=4;
+      (r.steps||[]).forEach((s,i)=>{
+        if(yR>H-25){doc.addPage();doc.setFillColor(247,243,238);doc.rect(0,0,W,H,'F');yR=mg;}
+        doc.setFillColor(193,99,58);doc.circle(crX+3.5,yR-1,3.5,'F');
+        sf('bold',7.5,[255,255,255]);doc.text((i+1).toString(),crX+3.5,yR-0.3,{align:'center'});
+        sf('normal',8.5,[58,52,48]);
+        const sl=doc.splitTextToSize(s,crW-11);
+        sl.forEach(l=>{if(yR>H-22)return;doc.text(l,crX+10,yR);yR+=4.8;});
+        yR+=2;
+      });
+      if(bs.notes&&r.notes){
+        const ny=Math.max(yL,yR)+6;
+        if(ny<H-30){
+          const nl=doc.splitTextToSize(r.notes,cw-8);
+          doc.setFillColor(240,234,224);doc.setDrawColor(193,99,58);doc.setLineWidth(0.5);
+          doc.rect(mg,ny-3,cw,nl.length*4.8+9,'FD');
+          sf('bold',7,[193,99,58]);doc.text('NOTES',mg+4,ny+2);
+          sf('italic',8,[107,99,88]);nl.forEach((l,i)=>doc.text(l,mg+4,ny+7+i*4.8));
+        }
+      }
+      ln(mg,H-14,W-mg,H-14,[224,217,207],0.2);
+      sf('normal',7,[154,154,148]);
+      doc.text(bs.title||'Recipe Journal',mg,H-10);
+      doc.text(String(doc.getCurrentPageInfo().pageNumber),W-mg,H-10,{align:'right'});
+    });
+
+    const fn=(bs.title||'recipes').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.pdf';
+    doc.save(fn);hideLoading();toast('PDF downloaded ✓','ok');
+  } catch(e){hideLoading();console.error(e);toast('PDF error: '+e.message,'err');}
 }
 
 function exportWord() {
